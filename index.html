@@ -430,16 +430,7 @@ footer .verde{color:#5ddd85;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getFirestore, collection, doc, onSnapshot, runTransaction, addDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyA_3h4Ty1754sV4oSKJ_3QIEWJRmGBcUtM",
-  authDomain: "capibots-loja.firebaseapp.com",
-  projectId: "capibots-loja",
-  storageBucket: "capibots-loja.firebasestorage.app",
-  messagingSenderId: "34601428710",
-  appId: "1:34601428710:web:65a135b011843523e0bd27",
-  measurementId: "G-TE2JFX8C0T"
-};
+import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
