@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finalizar Pedido · Capibots</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#2d9e4f;--verde-escuro:#1a6130;--verde-claro:#e8f8ee;
+  --laranja:#f07020;--laranja-escuro:#b85010;--laranja-claro:#fff0e6;
+  --amarelo:#FFD700;--preto:#111111;
+  --bg:#f5f6f3;--text:#1a1a1a;--text-muted:#666;
+  --border:rgba(0,0,0,0.09);--radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+.top-bar{
+  background:var(--preto);padding:0.9rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.top-bar-left{display:flex;align-items:center;gap:12px;}
+.top-logo{width:30px;height:30px;object-fit:contain;}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;}
+.breadcrumb a{color:rgba(255,255,255,0.5);text-decoration:none;}
+.breadcrumb a:hover{color:var(--laranja);}
+.breadcrumb span{color:rgba(255,255,255,0.25);}
+.breadcrumb strong{color:var(--laranja);}
+
+.page{max-width:660px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+
+/* STEPS */
+.steps{display:flex;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:1.75rem;}
+.step{flex:1;text-align:center;padding:9px 6px;font-size:11px;font-weight:800;color:var(--text-muted);background:#fff;border-right:1px solid var(--border);}
+.step:last-child{border-right:none;}
+.step.done{background:var(--verde-claro);color:var(--verde-escuro);}
+.step.active{background:var(--laranja);color:#fff;}
+.step-n{font-size:14px;display:block;margin-bottom:1px;}
+
+h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--preto);margin-bottom:1.5rem;display:flex;align-items:center;gap:8px;}
+
+/* CARD */
+.card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-bottom:1.25rem;}
+.card-tit{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:var(--preto);margin-bottom:1rem;display:flex;align-items:center;gap:7px;}
+
+/* RESUMO */
+.p-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.p-item:last-of-type{border-bottom:none;}
+.pi-em{font-size:22px;}
+.pi-nome{flex:1;font-weight:700;}
+.pi-qty{color:var(--text-muted);font-size:12px;}
+.pi-tot{font-weight:900;color:var(--laranja);}
+
+.total-box{background:var(--laranja-claro);border-radius:12px;padding:.9rem 1.2rem;display:flex;justify-content:space-between;align-items:center;margin-top:.9rem;}
+.total-box .lb{font-weight:700;color:var(--laranja-escuro);font-size:14px;}
+.total-box .vl{font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;color:var(--laranja-escuro);}
+
+/* FORM */
+.fg{margin-bottom:.9rem;}
+.fg label{display:block;font-weight:700;font-size:12px;color:var(--laranja-escuro);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+.fg input,.fg select,.fg textarea{
+  width:100%;border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 14px;font-family:'Nunito',sans-serif;font-size:14px;
+  color:var(--text);background:#fff;outline:none;transition:border-color .15s;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--laranja);}
+.fg textarea{resize:vertical;min-height:65px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* PIX */
+.pix-box{
+  background:var(--amarelo-claro,#fffae6);
+  border:2px dashed #e0c000;border-radius:14px;padding:1.5rem;text-align:center;
+}
+.pix-qr{
+  width:170px;height:170px;background:#fff;border-radius:12px;
+  margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;
+  border:2px solid #e0d060;overflow:hidden;
+}
+.pix-qr img{width:100%;height:100%;object-fit:contain;}
+.qr-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-muted);font-size:12px;}
+.pix-chave-label{font-size:12px;color:var(--text-muted);margin-bottom:5px;}
+.pix-chave{
+  background:#fff;border:1.5px solid #e0d060;border-radius:8px;
+  padding:8px 14px;font-family:monospace;font-size:14px;font-weight:700;
+  color:var(--laranja-escuro);display:inline-block;cursor:pointer;user-select:all;
+  transition:background .15s;
+}
+.pix-chave:hover{background:#fffbe0;}
+.pix-valor{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--laranja-escuro);margin:10px 0 4px;}
+.copy-btn{
+  background:var(--laranja);color:#fff;border:none;border-radius:50px;
+  padding:8px 20px;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;
+  cursor:pointer;margin-top:8px;transition:background .15s;
+}
+.copy-btn:hover{background:var(--laranja-escuro);}
+.pix-instrucoes{font-size:12px;color:var(--text-muted);line-height:1.6;margin-top:8px;}
+
+.alert-info{
+  background:#fff3cd;border:1px solid #ffc107;border-radius:10px;
+  padding:10px 14px;font-size:13px;color:#856404;margin-top:.75rem;
+}
+
+/* BOTÃO SUBMIT */
+.btn-enviar{
+  width:100%;background:var(--laranja);color:#fff;border:none;border-radius:50px;
+  padding:15px;font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;
+  cursor:pointer;transition:background .15s,transform .1s;margin-top:.5rem;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-enviar:hover{background:var(--laranja-escuro);transform:scale(1.02);}
+.btn-enviar:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+
+/* CONFIRMAÇÃO */
+.confirmacao{display:none;text-align:center;padding:2.5rem 1rem;}
+.conf-logo{width:100px;margin-bottom:1rem;animation:pop .5s cubic-bezier(.4,0,.2,1);}
+@keyframes pop{0%{transform:scale(0);}80%{transform:scale(1.1);}100%{transform:scale(1);}}
+.confirmacao h2{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--laranja-escuro);margin-bottom:8px;}
+.confirmacao p{color:var(--text-muted);font-size:14px;line-height:1.6;}
+.pedido-id{
+  background:var(--verde-claro);border-radius:10px;padding:8px 18px;
+  display:inline-block;font-family:monospace;font-weight:700;
+  color:var(--verde-escuro);font-size:15px;margin:1rem 0;
+}
+.btn-voltar{
+  background:var(--laranja);color:#fff;border:none;border-radius:50px;
+  padding:12px 28px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;
+  cursor:pointer;margin-top:1rem;transition:transform .15s;
+}
+.btn-voltar:hover{transform:scale(1.05);}
+
+/* ERRO ESTOQUE */
+.stock-error{
+  background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;
+  padding:12px 16px;font-size:13px;color:#991b1b;margin-top:.75rem;display:none;
+}
+
+@media(max-width:500px){.form-row{grid-template-columns:1fr;}.page{padding:1.25rem 1rem 3rem;}}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <img src="logo-capibots.png" alt="Logo" class="top-logo">
+    <div class="breadcrumb">
+      <a href="index.html">← Loja</a>
+      <span>/</span>
+      <strong>Finalizar Pedido</strong>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <div class="steps">
+    <div class="step done"><span class="step-n">✓</span>Produtos</div>
+    <div class="step active"><span class="step-n">2</span>Seus Dados</div>
+    <div class="step"><span class="step-n">3</span>PIX</div>
+    <div class="step"><span class="step-n">4</span>Confirmado</div>
+  </div>
+
+  <div id="form-section">
+    <h1>📋 Finalizar Pedido</h1>
+
+    <div class="card">
+      <div class="card-tit">🛒 Resumo</div>
+      <div id="resumo-items"></div>
+      <div class="total-box">
+        <span class="lb">Total via PIX:</span>
+        <span class="vl" id="total-display">R$ 0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tit">👤 Seus Dados</div>
+      <div class="form-row">
+        <div class="fg"><label>Nome completo *</label><input type="text" id="nome" placeholder="Seu nome completo" required></div>
+        <div class="fg"><label>Turma / Série *</label><input type="text" id="turma" placeholder="Ex: 3º A" required></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label>WhatsApp *</label><input type="tel" id="whatsapp" placeholder="(34) 9xxxx-xxxx" required></div>
+        <div class="fg"><label>E-mail (opcional)</label><input type="email" id="email" placeholder="seu@email.com"></div>
+      </div>
+      <div class="fg"><label>Observações</label><textarea id="obs" placeholder="Alguma observação?"></textarea></div>
+    </div>
+
+    <div class="card">
+      <div class="card-tit">💸 Pagamento via PIX</div>
+      <div class="pix-box">
+        <div class="pix-qr">
+          <!-- Substitua pelo seu QR Code real: <img src="qrcode-pix.png" alt="QR Code PIX"> -->
+          <div class="qr-placeholder">
+            <span style="font-size:36px">📱</span>
+            <span>QR Code PIX</span>
+            <span style="font-size:10px;color:#bbb">(substitua pela imagem real)</span>
+          </div>
+        </div>
+        <div class="pix-chave-label">Chave PIX da equipe Capibots:</div>
+        <div class="pix-chave" id="pix-chave-txt" onclick="copiarChave()">capibots@escola.com.br</div>
+        <div class="pix-valor" id="pix-valor-txt">R$ 0</div>
+        <button class="copy-btn" onclick="copiarChave()">📋 Copiar chave PIX</button>
+        <div class="pix-instrucoes">
+          Abra seu app bancário → PIX → Pagar → cole a chave ou escaneie o QR Code.<br>
+          Após pagar, clique em <strong>"Confirmar Pagamento"</strong> abaixo.
+        </div>
+      </div>
+      <div class="alert-info">⚠️ Após confirmação do PIX, a equipe combinará a entrega presencialmente na escola. Guarde o comprovante!</div>
+      <div class="stock-error" id="stock-error"></div>
+    </div>
+
+    <button class="btn-enviar" id="btn-enviar" onclick="confirmarPedido()">
+      ✅ Confirmar Pagamento e Enviar Pedido
+    </button>
+  </div>
+
+  <div class="confirmacao" id="confirmacao">
+    <img src="logo-capibots.png" alt="Capibots" class="conf-logo">
+    <h2>Pedido Registrado! 🎉</h2>
+    <p>Seu pedido foi enviado com sucesso.<br>A equipe Capibots vai confirmar o PIX e combinar a entrega.</p>
+    <div class="pedido-id" id="pedido-id-display"></div>
+    <p style="font-size:12px;color:#999">Guarde este número e o comprovante do PIX.</p>
+    <br>
+    <button class="btn-voltar" onclick="window.location.href='index.html'">🦫 Voltar à Loja</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, doc, runTransaction, addDoc, serverTimestamp, getDoc }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// ══════════════════════════════════════════════════════════════
+// ⚠️  MESMA CONFIGURAÇÃO DO index.html
+// ══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  projectId:         "SEU_PROJETO",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};
+// ══════════════════════════════════════════════════════════════
+
+// ⚠️ EDITE: chave PIX real da equipe
+const PIX_CHAVE = 'capibots@escola.com.br';
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// Lê carrinho da sessão
+let carrinho = {};
+try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } catch(e){}
+const itens = Object.values(carrinho);
+const total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
+
+// Atualiza exibições
+document.getElementById('pix-chave-txt').textContent = PIX_CHAVE;
+document.getElementById('pix-valor-txt').textContent  = 'R$ ' + total;
+document.getElementById('total-display').textContent  = 'R$ ' + total;
+
+// Resumo
+const resumoEl = document.getElementById('resumo-items');
+resumoEl.innerHTML = itens.length === 0
+  ? '<p style="color:#999;font-size:13px">Carrinho vazio.</p>'
+  : itens.map(i => `
+      <div class="p-item">
+        <span class="pi-em">${i.emoji}</span>
+        <span class="pi-nome">${i.nome}</span>
+        <span class="pi-qty">${i.qty}× R$ ${i.preco}</span>
+        <span class="pi-tot">R$ ${i.preco * i.qty}</span>
+      </div>`).join('');
+
+window.copiarChave = function() {
+  navigator.clipboard.writeText(PIX_CHAVE).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.textContent = '📋 Copiar chave PIX', 2000);
+  });
+};
+
+function gerarId() {
+  const d = new Date();
+  const ts = String(d.getFullYear()).slice(-2)
+    + String(d.getMonth()+1).padStart(2,'0')
+    + String(d.getDate()).padStart(2,'0')
+    + String(d.getHours()).padStart(2,'0')
+    + String(d.getMinutes()).padStart(2,'0');
+  return 'CAP-' + ts + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
+}
+
+window.confirmarPedido = async function() {
+  const nome     = document.getElementById('nome').value.trim();
+  const turma    = document.getElementById('turma').value.trim();
+  const whatsapp = document.getElementById('whatsapp').value.trim();
+  const email    = document.getElementById('email').value.trim();
+  const obs      = document.getElementById('obs').value.trim();
+  const errEl    = document.getElementById('stock-error');
+
+  errEl.style.display = 'none';
+  if (!nome || !turma || !whatsapp) { alert('Preencha nome, turma e WhatsApp!'); return; }
+  if (!itens.length) { alert('Carrinho vazio!'); return; }
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Registrando pedido...';
+
+  try {
+    const idPedido = gerarId();
+
+    // ── TRANSAÇÃO ATÔMICA: decrementa estoque de todos os itens ──────────
+    await runTransaction(db, async (tx) => {
+      // Lê todos os docs de estoque necessários
+      const reads = await Promise.all(
+        itens.map(i => tx.get(doc(db, 'estoque', i.id)))
+      );
+
+      // Verifica disponibilidade
+      for (let k = 0; k < itens.length; k++) {
+        const snap = reads[k];
+        const item = itens[k];
+        if (!snap.exists()) throw new Error(`Produto ${item.nome} não encontrado no estoque.`);
+        const atual = snap.data().quantidade;
+        if (atual < item.qty) throw new Error(`Estoque insuficiente para: ${item.nome} (disponível: ${atual}).`);
+      }
+
+      // Decrementa cada item
+      for (let k = 0; k < itens.length; k++) {
+        const snap = reads[k];
+        const item = itens[k];
+        tx.update(doc(db, 'estoque', item.id), { quantidade: snap.data().quantidade - item.qty });
+      }
+
+      // Registra pedido
+      tx.set(doc(db, 'pedidos', idPedido), {
+        id: idPedido, nome, turma, whatsapp, email, obs,
+        itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
+        total, status: 'aguardando',
+        pix_chave: PIX_CHAVE,
+        criadoEm: serverTimestamp(),
+      });
+    });
+
+    // Sucesso
+    sessionStorage.removeItem('capibots_cart');
+    document.getElementById('form-section').style.display = 'none';
+    document.getElementById('confirmacao').style.display  = 'block';
+    document.getElementById('pedido-id-display').textContent = idPedido;
+    document.querySelectorAll('.step').forEach((s,i) => s.className = 'step ' + (i < 3 ? 'done' : 'active'));
+
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = '❌ ' + (err.message || 'Erro ao registrar. Tente novamente.');
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '✅ Confirmar Pagamento e Enviar Pedido';
+  }
+};
+</script>
+</body>
+</html>

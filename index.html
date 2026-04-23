@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lojinha Capibots 🛒</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde:        #2d9e4f;
+  --verde-escuro: #1a6130;
+  --verde-claro:  #e8f8ee;
+  --laranja:      #f07020;
+  --laranja-escuro: #b85010;
+  --laranja-claro:  #fff0e6;
+  --amarelo:      #FFD700;
+  --amarelo-escuro: #c8a800;
+  --amarelo-claro:  #fffae6;
+  --preto:        #111111;
+  --bg:           #f5f6f3;
+  --card-bg:      #ffffff;
+  --text:         #1a1a1a;
+  --text-muted:   #666;
+  --border:       rgba(0,0,0,0.09);
+  --shadow:       0 6px 28px rgba(0,0,0,0.10);
+  --radius:       18px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── HERO ── */
+.hero{
+  background:var(--preto);
+  position:relative;overflow:hidden;
+}
+.hero-stripes{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    -55deg,transparent,transparent 18px,
+    rgba(240,112,32,0.07) 18px,rgba(240,112,32,0.07) 36px
+  );
+}
+.hero-glow{
+  position:absolute;top:-60px;left:-60px;
+  width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(240,112,32,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-glow2{
+  position:absolute;bottom:-80px;right:-40px;
+  width:250px;height:250px;border-radius:50%;
+  background:radial-gradient(circle,rgba(45,158,79,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-inner{
+  position:relative;max-width:1040px;margin:0 auto;
+  padding:2.5rem 1.5rem 2rem;
+  display:flex;align-items:center;gap:2rem;flex-wrap:wrap;
+}
+.hero-logo{
+  width:110px;height:110px;object-fit:contain;
+  filter:drop-shadow(0 4px 18px rgba(240,112,32,0.5));
+  animation:float 4s ease-in-out infinite;
+  flex-shrink:0;
+}
+@keyframes float{
+  0%,100%{transform:translateY(0) rotate(-1deg);}
+  50%{transform:translateY(-8px) rotate(1deg);}
+}
+.hero-text{flex:1;min-width:200px;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--laranja);color:#fff;
+  font-size:11px;font-weight:800;
+  padding:4px 12px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:0.8px;
+  margin-bottom:10px;
+}
+.hero-title{
+  font-family:'Baloo 2',sans-serif;
+  font-size:clamp(26px,5vw,44px);font-weight:900;
+  color:#fff;line-height:1.05;margin-bottom:6px;
+}
+.hero-title .laranja{color:var(--laranja);}
+.hero-title .verde{color:#5ddd85;}
+.hero-sub{font-size:13px;color:rgba(255,255,255,0.6);line-height:1.5;}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.chip{
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.8);
+  font-size:12px;font-weight:700;
+  padding:4px 12px;border-radius:20px;
+}
+
+/* ── NAVBAR ── */
+.nav-bar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(17,17,17,0.96);
+  backdrop-filter:blur(8px);
+  padding:0.7rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(240,112,32,0.3);
+}
+.nav-logo-wrap{display:flex;align-items:center;gap:10px;}
+.nav-logo-img{width:32px;height:32px;object-fit:contain;}
+.nav-logo-txt{
+  font-family:'Baloo 2',sans-serif;
+  font-weight:900;font-size:17px;color:#fff;
+}
+.nav-logo-txt span{color:var(--laranja);}
+.cart-btn{
+  background:var(--laranja);border:none;border-radius:50px;
+  padding:8px 18px;
+  font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;
+  color:#fff;cursor:pointer;
+  display:flex;align-items:center;gap:8px;
+  transition:transform .15s,background .15s;
+}
+.cart-btn:hover{background:var(--laranja-escuro);transform:scale(1.04);}
+.cart-count{
+  background:#fff;color:var(--laranja);
+  font-size:11px;font-weight:900;
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ── MAIN ── */
+main{max-width:1040px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+
+/* ── INFO STRIP ── */
+.info-strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin-bottom:2rem;
+}
+.info-card{
+  background:#fff;border-radius:14px;border:1px solid var(--border);
+  padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:10px;
+}
+.info-icon{font-size:22px;flex-shrink:0;}
+.info-label{font-weight:800;font-size:13px;color:var(--laranja-escuro);}
+.info-desc{font-size:12px;color:var(--text-muted);line-height:1.4;margin-top:1px;}
+
+/* ── PRODUTOS ── */
+.section-title{
+  font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;
+  color:var(--preto);margin-bottom:1.25rem;
+  display:flex;align-items:center;gap:8px;
+}
+.produtos-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));
+  gap:18px;margin-bottom:3rem;
+}
+
+/* ── CARD PRODUTO ── */
+.card{
+  background:var(--card-bg);border-radius:var(--radius);
+  border:1.5px solid var(--border);
+  transition:transform .2s,box-shadow .2s;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.card:hover{transform:translateY(-5px);box-shadow:var(--shadow);}
+
+.card-visual{
+  height:130px;display:flex;align-items:center;justify-content:center;
+  font-size:60px;position:relative;
+}
+.cv-laranja{background:linear-gradient(135deg,#fff0e6,#ffd6b3);}
+.cv-verde{background:linear-gradient(135deg,#e8f8ee,#b8edca);}
+.cv-amarelo{background:linear-gradient(135deg,#fffae6,#ffeea0);}
+.cv-escuro{background:linear-gradient(135deg,#f0f0f0,#d8d8d8);}
+
+.card-tag{
+  position:absolute;top:10px;right:10px;
+  font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.tag-laranja{background:var(--laranja);color:#fff;}
+.tag-verde{background:var(--verde);color:#fff;}
+.tag-amarelo{background:var(--amarelo);color:var(--preto);}
+.tag-preto{background:var(--preto);color:#fff;}
+
+.card-body{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;}
+.card-nome{
+  font-family:'Baloo 2',sans-serif;
+  font-size:15px;font-weight:900;color:var(--preto);
+  margin-bottom:4px;line-height:1.2;
+}
+.card-desc{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;flex:1;}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--border);padding-top:11px;
+}
+.preco{
+  font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;
+  color:var(--laranja);
+}
+.estoque-info{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.estoque-esgotado{font-size:11px;color:#dc2626;font-weight:700;}
+
+.btn-add{
+  background:var(--laranja);color:#fff;border:none;border-radius:50px;
+  padding:8px 16px;
+  font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;
+  cursor:pointer;transition:background .15s,transform .1s;
+  display:flex;align-items:center;gap:5px;
+}
+.btn-add:hover{background:var(--laranja-escuro);transform:scale(1.06);}
+.btn-add:disabled{background:#ccc;cursor:not-allowed;transform:none;}
+.btn-add.added{background:var(--verde);}
+
+/* ── LOADING STATE ── */
+.loading-state{
+  grid-column:1/-1;text-align:center;padding:3rem;
+  color:var(--text-muted);
+}
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--laranja);border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  margin:0 auto 12px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── CARRINHO DRAWER ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.overlay.open{opacity:1;pointer-events:all;}
+
+.cart-drawer{
+  position:fixed;top:0;right:0;width:min(400px,100vw);height:100vh;
+  background:#fff;z-index:201;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  box-shadow:-8px 0 40px rgba(0,0,0,0.18);
+}
+.cart-drawer.open{transform:translateX(0);}
+
+.cart-header{
+  background:var(--preto);
+  padding:1.25rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cart-header-left{display:flex;align-items:center;gap:10px;}
+.cart-header-logo{width:32px;height:32px;object-fit:contain;}
+.cart-header h2{
+  font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;color:#fff;
+}
+.close-btn{
+  background:rgba(255,255,255,0.12);border:none;border-radius:50%;
+  width:32px;height:32px;color:#fff;font-size:17px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.close-btn:hover{background:rgba(255,255,255,0.25);}
+
+.cart-items{flex:1;overflow-y:auto;padding:1rem 1.25rem;}
+.cart-empty{text-align:center;padding:3rem 1rem;color:var(--text-muted);}
+.cart-empty img{width:70px;opacity:.5;margin-bottom:12px;}
+.cart-empty p{font-size:14px;}
+
+.cart-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 0;border-bottom:1px solid var(--border);
+}
+.ci-emoji{font-size:28px;width:36px;text-align:center;}
+.ci-info{flex:1;}
+.ci-nome{font-weight:700;font-size:13px;}
+.ci-preco{font-size:12px;color:var(--text-muted);}
+.qty-ctrl{display:flex;align-items:center;gap:6px;}
+.qty-btn{
+  background:var(--laranja-claro);border:1px solid var(--laranja);
+  border-radius:50%;width:24px;height:24px;
+  font-size:14px;font-weight:700;color:var(--laranja-escuro);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.qty-btn:hover{background:var(--laranja);color:#fff;}
+.qty-num{font-weight:800;font-size:14px;min-width:18px;text-align:center;}
+.ci-total{font-weight:900;font-size:14px;color:var(--laranja);min-width:48px;text-align:right;}
+
+.cart-footer{
+  padding:1.25rem;border-top:2px solid var(--border);
+  background:var(--laranja-claro);
+}
+.total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.total-label{font-weight:700;font-size:14px;color:var(--text-muted);}
+.total-val{
+  font-family:'Baloo 2',sans-serif;font-size:30px;font-weight:900;
+  color:var(--laranja-escuro);
+}
+.btn-checkout{
+  width:100%;background:var(--laranja);color:#fff;
+  border:none;border-radius:50px;padding:14px;
+  font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;
+  cursor:pointer;transition:background .15s,transform .1s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-checkout:hover{background:var(--laranja-escuro);transform:scale(1.02);}
+.btn-checkout:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:2rem;left:50%;
+  transform:translateX(-50%) translateY(100px);
+  background:var(--preto);color:#fff;
+  padding:11px 22px;border-radius:50px;
+  font-weight:700;font-size:13px;z-index:999;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 8px 32px rgba(0,0,0,0.3);
+  white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── FOOTER ── */
+footer{
+  background:var(--preto);color:rgba(255,255,255,0.5);
+  text-align:center;padding:1.5rem;font-size:12px;
+}
+footer strong{color:var(--laranja);}
+footer .verde{color:#5ddd85;}
+
+@media(max-width:600px){
+  .hero-logo{width:80px;height:80px;}
+  main{padding:1.25rem 1rem 3rem;}
+  .produtos-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-stripes"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-inner">
+    <img src="logo-capibots.png" alt="Capibots" class="hero-logo">
+    <div class="hero-text">
+      <div class="hero-badge">⚽ Copa do Mundo 2026</div>
+      <h1 class="hero-title">
+        Lojinha<br>
+        <span class="laranja">Capi</span><span class="verde">bots</span>
+      </h1>
+      <p class="hero-sub">Produtos exclusivos com a capivara mais tecnológica do Brasil.<br>Retirada na escola · Sem frete · Pague via PIX</p>
+      <div class="hero-chips">
+        <span class="chip">🏫 Retirada na escola</span>
+        <span class="chip">💸 Pix sem taxas</span>
+        <span class="chip">🤖 TBR 2026</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav-bar">
+  <div class="nav-logo-wrap">
+    <img src="logo-capibots.png" alt="Logo" class="nav-logo-img">
+    <span class="nav-logo-txt"><span>Capi</span>bots</span>
+  </div>
+  <button class="cart-btn" onclick="toggleCart()">
+    🛒 Carrinho
+    <span class="cart-count" id="cart-count">0</span>
+  </button>
+</nav>
+
+<main>
+  <!-- INFO -->
+  <div class="info-strip">
+    <div class="info-card">
+      <span class="info-icon">🏫</span>
+      <div><div class="info-label">Retirada Presencial</div><div class="info-desc">Entrega na escola após confirmação do PIX</div></div>
+    </div>
+    <div class="info-card">
+      <span class="info-icon">💸</span>
+      <div><div class="info-label">Pagamento via PIX</div><div class="info-desc">Rápido, seguro e sem taxas extras</div></div>
+    </div>
+    <div class="info-card">
+      <span class="info-icon">📦</span>
+      <div><div class="info-label">Estoque em Tempo Real</div><div class="info-desc">Disponibilidade atualizada automaticamente</div></div>
+    </div>
+    <div class="info-card">
+      <span class="info-icon">🤖</span>
+      <div><div class="info-label">Equipe Capibots</div><div class="info-desc">TBR 2026 · ODS 4 — Educação e Trabalho</div></div>
+    </div>
+  </div>
+
+  <div class="section-title">🛍️ Nossos Produtos</div>
+  <div class="produtos-grid" id="produtos-grid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      Carregando produtos...
+    </div>
+  </div>
+</main>
+
+<footer>
+  <strong>Lojinha Capibots</strong> · TBR 2026 · <span class="verde">ODS 4 — Educação, Trabalho e Sustentabilidade</span><br>
+  Todos os produtos com retirada presencial na escola · Dúvidas? Fale com a equipe
+</footer>
+
+<!-- CARRINHO -->
+<div class="overlay" id="overlay" onclick="toggleCart()"></div>
+<div class="cart-drawer" id="cart-drawer">
+  <div class="cart-header">
+    <div class="cart-header-left">
+      <img src="logo-capibots.png" alt="Logo" class="cart-header-logo">
+      <h2>Carrinho</h2>
+    </div>
+    <button class="close-btn" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="total-row">
+      <span class="total-label">Total via PIX:</span>
+      <span class="total-val" id="cart-total">R$ 0</span>
+    </div>
+    <button class="btn-checkout" id="btn-checkout" onclick="irParaCheckout()" disabled>
+      Finalizar Pedido →
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, doc, onSnapshot, runTransaction, addDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// ══════════════════════════════════════════════════════════════
+// ⚠️  SUBSTITUA COM SUAS CONFIGURAÇÕES DO FIREBASE
+// ══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  projectId:         "SEU_PROJETO",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};
+// ══════════════════════════════════════════════════════════════
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── PRODUTOS (definição local, estoque vem do Firebase) ─────────────────
+const PRODUTOS_DEF = [
+  { id:'chaveiro',  nome:'Chaveiro Capivara Brasil', emoji:'🔑', cor:'cv-laranja', tag:'⚽ Destaque', tagCor:'tag-laranja', desc:'Emborrachado, capivara de verde e amarela pronta pra Copa. Produto exclusivo Capibots!', preco:10 },
+  { id:'pin-crocs', nome:'Pin Capivara p/ Crocs',    emoji:'🩴', cor:'cv-verde',   tag:'🔥 Tendência',tagCor:'tag-verde',   desc:'Jibbitz emborrachado com a capivara segurando a bandeirinha do Brasil. Kit 6 un.', preco:10 },
+  { id:'pulseira',  nome:'Pulseira Capivara Copa',   emoji:'📿', cor:'cv-amarelo', tag:'🇧🇷 Copa',    tagCor:'tag-amarelo', desc:'Silicone verde e amarela com capivara em relevo. Perfeita para torcer pelo Brasil!', preco:10 },
+  { id:'lapis',     nome:'Lápis & Lapiseira Capivara',emoji:'✏️',cor:'cv-escuro',  tag:'📚 ODS 4',    tagCor:'tag-preto',   desc:'Kit escolar fofo: lápis + lapiseira + apontador. Tema capivara. Apoia a educação!', preco:10 },
+];
+
+// estoque em tempo real do Firestore
+let estoqueRT = {};
+let carrinho  = {};
+
+// ── LISTENER TEMPO REAL ─────────────────────────────────────────────────
+const estoqueCol = collection(db, 'estoque');
+onSnapshot(estoqueCol, (snap) => {
+  snap.forEach(d => { estoqueRT[d.id] = d.data().quantidade; });
+  renderProdutos();
+  renderCarrinho();
+}, (err) => {
+  console.error('Firebase erro:', err);
+  document.getElementById('produtos-grid').innerHTML =
+    '<div class="loading-state" style="color:#dc2626">⚠️ Erro ao conectar ao banco de dados.<br><small>Verifique a configuração do Firebase.</small></div>';
+});
+
+// ── RENDER PRODUTOS ─────────────────────────────────────────────────────
+function renderProdutos() {
+  const grid = document.getElementById('produtos-grid');
+  grid.innerHTML = PRODUTOS_DEF.map(p => {
+    const qt = estoqueRT[p.id] ?? '…';
+    const temEstoque = typeof qt === 'number' && qt > 0;
+    const noCarrinho = carrinho[p.id]?.qty || 0;
+    const disponivelAgora = typeof qt === 'number' ? qt - noCarrinho : 0;
+    return `
+    <div class="card">
+      <div class="card-visual ${p.cor}">
+        ${p.emoji}
+        <span class="card-tag ${p.tagCor}">${p.tag}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-nome">${p.nome}</div>
+        <div class="card-desc">${p.desc}</div>
+        <div class="card-footer">
+          <div>
+            <div class="preco">R$ ${p.preco}</div>
+            ${temEstoque
+              ? `<div class="estoque-info">${disponivelAgora} disponíveis</div>`
+              : qt === '…'
+                ? `<div class="estoque-info">verificando…</div>`
+                : `<div class="estoque-esgotado">Esgotado</div>`}
+          </div>
+          <button class="btn-add" id="btn-${p.id}"
+            ${(temEstoque && disponivelAgora > 0) ? '' : 'disabled'}
+            onclick="addCarrinho('${p.id}')">
+            ${temEstoque && disponivelAgora > 0 ? '+ Adicionar' : 'Esgotado'}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CARRINHO (local — reserva real ocorre no checkout) ──────────────────
+window.addCarrinho = function(id) {
+  const prod = PRODUTOS_DEF.find(p => p.id === id);
+  const qt   = estoqueRT[id] ?? 0;
+  const jaNoCarrinho = carrinho[id]?.qty || 0;
+  if (!prod || qt - jaNoCarrinho <= 0) return;
+
+  if (carrinho[id]) carrinho[id].qty++;
+  else carrinho[id] = { ...prod, qty: 1 };
+
+  renderProdutos();
+  renderCarrinho();
+  showToast(`${prod.emoji} ${prod.nome} adicionado!`);
+
+  const btn = document.getElementById('btn-' + id);
+  if (btn) { btn.classList.add('added'); setTimeout(() => btn.classList.remove('added'), 500); }
+};
+
+window.removerUm = function(id) {
+  if (!carrinho[id]) return;
+  carrinho[id].qty--;
+  if (carrinho[id].qty <= 0) delete carrinho[id];
+  renderProdutos();
+  renderCarrinho();
+};
+
+function renderCarrinho() {
+  const itens = Object.values(carrinho);
+  const total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
+  const count = itens.reduce((s,i) => s + i.qty, 0);
+
+  document.getElementById('cart-count').textContent = count;
+  document.getElementById('cart-total').textContent = 'R$ ' + total;
+  document.getElementById('btn-checkout').disabled = count === 0;
+
+  const el = document.getElementById('cart-items');
+  if (itens.length === 0) {
+    el.innerHTML = `<div class="cart-empty">
+      <img src="logo-capibots.png" alt=""><br>
+      <p>Carrinho vazio.<br>Adicione produtos!</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = itens.map(i => {
+    const dispExtra = (estoqueRT[i.id] ?? 0) - i.qty;
+    return `
+    <div class="cart-item">
+      <span class="ci-emoji">${i.emoji}</span>
+      <div class="ci-info">
+        <div class="ci-nome">${i.nome}</div>
+        <div class="ci-preco">R$ ${i.preco} cada</div>
+      </div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="removerUm('${i.id}')">−</button>
+        <span class="qty-num">${i.qty}</span>
+        <button class="qty-btn" onclick="addCarrinho('${i.id}')"
+          ${dispExtra <= 0 ? 'disabled style="opacity:.4"' : ''}>+</button>
+      </div>
+      <span class="ci-total">R$ ${i.preco * i.qty}</span>
+    </div>`;
+  }).join('');
+}
+
+window.toggleCart = function() {
+  document.getElementById('cart-drawer').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+};
+
+window.irParaCheckout = function() {
+  const itens = Object.values(carrinho);
+  if (!itens.length) return;
+  sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
+  window.location.href = 'checkout.html';
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>

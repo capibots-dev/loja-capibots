@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Capibots</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#2d9e4f;--verde-escuro:#1a6130;--verde-claro:#e8f8ee;
+  --laranja:#f07020;--laranja-escuro:#b85010;--laranja-claro:#fff0e6;
+  --amarelo:#FFD700;--preto:#111111;
+  --bg:#f0f1ee;--text:#1a1a1a;--text-muted:#666;
+  --border:rgba(0,0,0,0.10);--radius:14px;
+  --vm:#dc2626;--vc:#fee2e2;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:var(--preto);display:flex;align-items:center;justify-content:center;z-index:999;}
+.login-box{background:#fff;border-radius:20px;padding:2.5rem;width:min(360px,92vw);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.login-box img{width:90px;margin-bottom:.75rem;}
+.login-box h1{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--preto);margin-bottom:3px;}
+.login-box p{font-size:12px;color:var(--text-muted);margin-bottom:1.5rem;}
+.login-box input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 16px;font-family:'Nunito',sans-serif;font-size:16px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:10px;transition:border-color .15s;}
+.login-box input:focus{border-color:var(--laranja);}
+.login-box button{width:100%;background:var(--laranja);color:#fff;border:none;border-radius:50px;padding:11px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:background .15s;}
+.login-box button:hover{background:var(--laranja-escuro);}
+.login-err{color:var(--vm);font-size:12px;margin-top:8px;display:none;}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:210px;flex-shrink:0;background:var(--preto);padding:1.5rem 1rem;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;}
+.sb-brand{display:flex;align-items:center;gap:9px;margin-bottom:1.5rem;}
+.sb-logo{width:36px;height:36px;object-fit:contain;}
+.sb-name{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;}
+.sb-name span{color:var(--laranja);}
+.sb-name small{display:block;font-size:10px;color:rgba(255,255,255,0.35);font-family:'Nunito',sans-serif;font-weight:400;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;color:rgba(255,255,255,0.65);font-size:13px;font-weight:700;cursor:pointer;transition:background .15s,color .15s;margin-bottom:3px;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:var(--laranja);color:#fff;}
+.nav-item .ic{font-size:15px;width:18px;text-align:center;}
+.sb-footer{margin-top:auto;}
+.btn-logout{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:rgba(255,255,255,0.5);padding:8px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;transition:background .15s;}
+.btn-logout:hover{background:rgba(255,255,255,0.15);color:#fff;}
+
+.main{flex:1;padding:1.75rem;overflow-x:hidden;}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.ph h1{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--preto);}
+
+/* MÉTRICAS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:1.5rem;}
+.mc{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:.9rem 1.1rem;}
+.mc-label{font-size:11px;color:var(--text-muted);font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
+.mc-val{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--preto);}
+.mc-val.laranja{color:var(--laranja);}
+.mc-val.verde{color:var(--verde);}
+.mc-val.amarelo{color:#a07800;}
+
+/* FILTROS */
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.1rem;}
+.fb{padding:6px 14px;border-radius:50px;border:1.5px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.fb:hover{border-color:var(--laranja);color:var(--laranja);}
+.fb.ativo{background:var(--laranja);border-color:var(--laranja);color:#fff;}
+
+/* TABELA */
+.tabela-wrap{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);overflow:hidden;}
+.tabela-hdr{padding:.9rem 1.2rem;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.tabela-hdr h2{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);}
+.tabela-vazia{padding:2.5rem;text-align:center;color:var(--text-muted);font-size:14px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--laranja-claro);padding:9px 12px;text-align:left;font-weight:800;color:var(--laranja-escuro);font-size:11px;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafafa;}
+
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;}
+.b-ag{background:var(--amarelo-claro,#fffae6);color:#a07800;}
+.b-cf{background:var(--verde-claro);color:var(--verde-escuro);}
+.b-en{background:#e0f2fe;color:#075985;}
+.b-ca{background:var(--vc);color:var(--vm);}
+
+.btn-a{padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;margin-right:3px;white-space:nowrap;}
+.btn-cf{border-color:var(--verde);color:var(--verde);}
+.btn-cf:hover{background:var(--verde);color:#fff;}
+.btn-en{border-color:#0369a1;color:#0369a1;}
+.btn-en:hover{background:#0369a1;color:#fff;}
+.btn-ca{border-color:var(--vm);color:var(--vm);}
+.btn-ca:hover{background:var(--vm);color:#fff;}
+
+/* LIVE BADGE */
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;animation:pulse-dot 1.5s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.3);}}
+
+/* ESTOQUE */
+.est-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+.est-card{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.2rem;}
+.est-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.est-em{font-size:28px;}
+.est-nm{font-weight:800;font-size:13px;color:var(--preto);line-height:1.2;}
+.est-bar-wrap{height:8px;background:#eee;border-radius:4px;margin-bottom:6px;overflow:hidden;}
+.est-bar{height:100%;border-radius:4px;background:var(--verde);transition:width .4s;}
+.est-bar.med{background:var(--laranja);}
+.est-bar.bx{background:var(--vm);}
+.est-nums{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);}
+.est-atual{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--preto);}
+.est-adj{display:flex;gap:6px;margin-top:10px;}
+.est-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;outline:none;transition:border-color .15s;}
+.est-inp:focus{border-color:var(--laranja);}
+.est-sav{background:var(--laranja);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s;}
+.est-sav:hover{background:var(--laranja-escuro);}
+
+/* SEÇÕES */
+.secao{display:none;}
+.secao.ativa{display:block;}
+
+@media(max-width:680px){.sidebar{display:none;}.main{padding:1rem;}table{font-size:11px;}th,td{padding:7px 9px;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <img src="logo-capibots.png" alt="Capibots">
+    <h1>Painel Admin</h1>
+    <p>Acesso restrito à equipe Capibots</p>
+    <input type="password" id="senha-input" placeholder="••••••" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">Entrar →</button>
+    <div class="login-err" id="login-err">Senha incorreta.</div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <img src="logo-capibots.png" alt="Logo" class="sb-logo">
+      <div class="sb-name"><span>Capi</span>bots<small>Painel Admin · TBR 2026</small></div>
+    </div>
+    <div class="nav-item active" onclick="showSec('pedidos',this)"><span class="ic">📋</span> Pedidos</div>
+    <div class="nav-item" onclick="showSec('estoque',this)"><span class="ic">📦</span> Estoque</div>
+    <div class="nav-item" onclick="showSec('relatorio',this)"><span class="ic">📊</span> Relatório</div>
+    <div class="sb-footer"><button class="btn-logout" onclick="logout()">Sair da conta</button></div>
+  </nav>
+
+  <main class="main">
+
+    <!-- PEDIDOS -->
+    <div class="secao ativa" id="sec-pedidos">
+      <div class="ph"><h1><span class="live-dot"></span>📋 Pedidos em Tempo Real</h1></div>
+      <div class="metrics" id="met-pedidos"></div>
+      <div class="filtros">
+        <button class="fb ativo" onclick="filtrar('todos',this)">Todos</button>
+        <button class="fb" onclick="filtrar('aguardando',this)">⏳ Aguardando PIX</button>
+        <button class="fb" onclick="filtrar('confirmado',this)">✅ PIX Confirmado</button>
+        <button class="fb" onclick="filtrar('entregue',this)">📦 Entregue</button>
+        <button class="fb" onclick="filtrar('cancelado',this)">❌ Cancelado</button>
+      </div>
+      <div class="tabela-wrap"><div class="tabela-hdr"><h2>Lista de Pedidos</h2></div><div id="tab-pedidos"></div></div>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div class="secao" id="sec-estoque">
+      <div class="ph"><h1><span class="live-dot"></span>📦 Estoque em Tempo Real</h1></div>
+      <div class="est-grid" id="est-grid"></div>
+    </div>
+
+    <!-- RELATÓRIO -->
+    <div class="secao" id="sec-relatorio">
+      <div class="ph"><h1>📊 Relatório Financeiro</h1></div>
+      <div class="metrics" id="met-rel"></div>
+      <div class="tabela-wrap" style="margin-top:1.25rem"><div class="tabela-hdr"><h2>Vendas por Produto</h2></div><div id="tab-rel"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// ══════════════════════════════════════════════════════════════
+// ⚠️  MESMA CONFIGURAÇÃO DOS OUTROS ARQUIVOS
+// ══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  projectId:         "SEU_PROJETO",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};
+// ══════════════════════════════════════════════════════════════
+
+// ⚠️ EDITE: senha do painel
+const SENHA = 'capibots2026';
+
+const PRODUTOS_DEF = [
+  { id:'chaveiro',  nome:'Chaveiro Capivara Brasil', emoji:'🔑', preco:10, estoqueInicial:30 },
+  { id:'pin-crocs', nome:'Pin Capivara p/ Crocs',    emoji:'🩴', preco:10, estoqueInicial:25 },
+  { id:'pulseira',  nome:'Pulseira Capivara Copa',   emoji:'📿', preco:10, estoqueInicial:40 },
+  { id:'lapis',     nome:'Lápis & Lapiseira Capivara',emoji:'✏️',preco:10, estoqueInicial:50 },
+];
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+let pedidosRT = [];
+let estoqueRT = {};
+let filtroAtivo = 'todos';
+
+// ── AUTH ─────────────────────────────────────────────────────
+window.login = function() {
+  if (document.getElementById('senha-input').value === SENHA) {
+    document.getElementById('login-overlay').style.display = 'none';
+    sessionStorage.setItem('admin_ok', '1');
+    iniciarListeners();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+  }
+};
+window.logout = function() { sessionStorage.removeItem('admin_ok'); location.reload(); };
+if (sessionStorage.getItem('admin_ok')) {
+  document.getElementById('login-overlay').style.display = 'none';
+  iniciarListeners();
+}
+
+// ── LISTENERS TEMPO REAL ─────────────────────────────────────
+function iniciarListeners() {
+  // Pedidos
+  onSnapshot(collection(db, 'pedidos'), snap => {
+    pedidosRT = snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
+    renderPedidos();
+    renderRelatorio();
+  });
+  // Estoque
+  onSnapshot(collection(db, 'estoque'), snap => {
+    snap.forEach(d => { estoqueRT[d.id] = d.data().quantidade; });
+    renderEstoque();
+  });
+}
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────
+window.showSec = function(id, el) {
+  document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('ativa');
+  el.classList.add('active');
+};
+
+// ── PEDIDOS ───────────────────────────────────────────────────
+window.filtrar = function(st, el) {
+  filtroAtivo = st;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('ativo'));
+  el.classList.add('ativo');
+  renderPedidos();
+};
+
+function renderPedidos() {
+  const total  = pedidosRT.length;
+  const ag     = pedidosRT.filter(p => p.status==='aguardando').length;
+  const cf     = pedidosRT.filter(p => p.status==='confirmado').length;
+  const en     = pedidosRT.filter(p => p.status==='entregue').length;
+  const rec    = pedidosRT.filter(p => p.status!=='cancelado').reduce((s,p)=>s+p.total,0);
+
+  document.getElementById('met-pedidos').innerHTML = `
+    <div class="mc"><div class="mc-label">Total Pedidos</div><div class="mc-val">${total}</div></div>
+    <div class="mc"><div class="mc-label">Aguardando PIX</div><div class="mc-val laranja">${ag}</div></div>
+    <div class="mc"><div class="mc-label">PIX Confirmado</div><div class="mc-val verde">${cf}</div></div>
+    <div class="mc"><div class="mc-label">Entregues</div><div class="mc-val">${en}</div></div>
+    <div class="mc"><div class="mc-label">Receita</div><div class="mc-val amarelo">R$ ${rec}</div></div>`;
+
+  const lista = filtroAtivo==='todos' ? pedidosRT : pedidosRT.filter(p => p.status===filtroAtivo);
+  const ord   = [...lista].sort((a,b) => (b.criadoEm?.seconds||0) - (a.criadoEm?.seconds||0));
+
+  if (!ord.length) {
+    document.getElementById('tab-pedidos').innerHTML = '<div class="tabela-vazia">🦫 Nenhum pedido encontrado.</div>';
+    return;
+  }
+
+  const bm = {
+    aguardando: '<span class="badge b-ag">⏳ Aguardando PIX</span>',
+    confirmado: '<span class="badge b-cf">✅ PIX Confirmado</span>',
+    entregue:   '<span class="badge b-en">📦 Entregue</span>',
+    cancelado:  '<span class="badge b-ca">❌ Cancelado</span>',
+  };
+
+  document.getElementById('tab-pedidos').innerHTML = `<table>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+    <tbody>${ord.map(p => {
+      const dt  = p.criadoEm ? new Date(p.criadoEm.seconds*1000) : new Date();
+      const dts = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const eis = (p.itens||[]).map(i=>`${i.emoji}${i.qty}×`).join(' ');
+      let ac = '';
+      if (p.status==='aguardando') ac = `<button class="btn-a btn-cf" onclick="mudar('${p._docId}','confirmado')">✅ Confirmar PIX</button><button class="btn-a btn-ca" onclick="mudar('${p._docId}','cancelado')">❌</button>`;
+      if (p.status==='confirmado') ac = `<button class="btn-a btn-en" onclick="mudar('${p._docId}','entregue')">📦 Entregue</button>`;
+      return `<tr>
+        <td><span style="font-family:monospace;font-size:10px">${p.id}</span></td>
+        <td><strong>${p.nome}</strong><br><span style="color:var(--text-muted);font-size:10px">${p.turma} · ${p.whatsapp}</span></td>
+        <td>${eis}</td><td><strong>R$ ${p.total}</strong></td>
+        <td>${bm[p.status]||p.status}</td>
+        <td style="font-size:10px;white-space:nowrap">${dts}</td>
+        <td>${ac}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+window.mudar = async function(docId, novoStatus) {
+  await updateDoc(doc(db, 'pedidos', docId), { status: novoStatus });
+};
+
+// ── ESTOQUE ───────────────────────────────────────────────────
+function renderEstoque() {
+  document.getElementById('est-grid').innerHTML = PRODUTOS_DEF.map(p => {
+    const at  = estoqueRT[p.id] ?? p.estoqueInicial;
+    const pct = Math.round((at / p.estoqueInicial) * 100);
+    const bc  = pct <= 20 ? 'bx' : pct <= 50 ? 'med' : '';
+    return `<div class="est-card">
+      <div class="est-top"><span class="est-em">${p.emoji}</span><span class="est-nm">${p.nome}</span></div>
+      <div class="est-atual">${at} un.</div>
+      <div class="est-bar-wrap"><div class="est-bar ${bc}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="est-nums"><span>0</span><span>${p.estoqueInicial} inicial</span></div>
+      <div class="est-adj">
+        <input type="number" class="est-inp" id="est-${p.id}" value="${at}" min="0">
+        <button class="est-sav" onclick="salvarEstoque('${p.id}')">Salvar</button>
+      </div></div>`;
+  }).join('');
+}
+
+window.salvarEstoque = async function(id) {
+  const val = parseInt(document.getElementById('est-' + id).value);
+  if (isNaN(val) || val < 0) return alert('Quantidade inválida!');
+  await setDoc(doc(db, 'estoque', id), { quantidade: val }, { merge: true });
+};
+
+// ── RELATÓRIO ─────────────────────────────────────────────────
+function renderRelatorio() {
+  const validos = pedidosRT.filter(p => p.status !== 'cancelado');
+  const receita = validos.reduce((s,p) => s + p.total, 0);
+  const totalIt = validos.reduce((s,p) => s + (p.itens||[]).reduce((a,i)=>a+i.qty,0), 0);
+  const custo   = totalIt * 4;
+  const lucro   = receita - custo;
+  const margem  = receita > 0 ? Math.round((lucro/receita)*100) : 0;
+
+  document.getElementById('met-rel').innerHTML = `
+    <div class="mc"><div class="mc-label">Receita Total</div><div class="mc-val verde">R$ ${receita}</div></div>
+    <div class="mc"><div class="mc-label">Custo Est.</div><div class="mc-val laranja">R$ ${custo}</div></div>
+    <div class="mc"><div class="mc-label">Lucro Est.</div><div class="mc-val amarelo">R$ ${lucro}</div></div>
+    <div class="mc"><div class="mc-label">Margem Bruta</div><div class="mc-val">${margem}%</div></div>
+    <div class="mc"><div class="mc-label">Itens Vendidos</div><div class="mc-val">${totalIt}</div></div>`;
+
+  const vnd = {};
+  PRODUTOS_DEF.forEach(p => vnd[p.id] = { ...p, qty:0, rec:0 });
+  validos.forEach(p => (p.itens||[]).forEach(i => {
+    if (vnd[i.id]) { vnd[i.id].qty += i.qty; vnd[i.id].rec += i.preco * i.qty; }
+  }));
+
+  document.getElementById('tab-rel').innerHTML = `<table>
+    <thead><tr><th>Produto</th><th style="text-align:center">Un. Vendidas</th><th style="text-align:center">Receita</th><th style="text-align:center">Custo Est.</th><th style="text-align:center">Lucro Est.</th></tr></thead>
+    <tbody>${Object.values(vnd).sort((a,b)=>b.qty-a.qty).map(v=>`<tr>
+      <td>${v.emoji} <strong>${v.nome}</strong></td>
+      <td style="text-align:center">${v.qty}</td>
+      <td style="text-align:center"><strong>R$ ${v.rec}</strong></td>
+      <td style="text-align:center">R$ ${v.qty*4}</td>
+      <td style="text-align:center;color:var(--verde)"><strong>R$ ${v.rec - v.qty*4}</strong></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+</script>
+</body>
+</html>
