@@ -126,9 +126,13 @@ tr:hover td{background:#fafafa;}
     <img src="logo-capibots.png" alt="Capibots">
     <h1>Painel Admin</h1>
     <p>Acesso restrito à equipe Capibots</p>
-    <input type="password" id="senha-input" placeholder="••••••" onkeydown="if(event.key==='Enter')login()">
-    <button onclick="login()">Entrar →</button>
-    <div class="login-err" id="login-err">Senha incorreta.</div>
+    <input type="text" id="username-input" placeholder="Usuário" autocomplete="username"
+      onkeydown="if(event.key==='Enter')document.getElementById('senha-input').focus()"
+      style="letter-spacing:normal;margin-bottom:8px;">
+    <input type="password" id="senha-input" placeholder="Senha" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')login()">
+    <button id="btn-login" onclick="login()">Entrar →</button>
+    <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
   </div>
 </div>
 
@@ -178,24 +182,9 @@ tr:hover td{background:#fafafa;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, serverTimestamp }
+import { getFirestore, collection, doc, getDoc, onSnapshot, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-// ══════════════════════════════════════════════════════════════
-// ⚠️  MESMA CONFIGURAÇÃO DOS OUTROS ARQUIVOS
-// ══════════════════════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "SUA_API_KEY",
-  authDomain:        "SEU_PROJETO.firebaseapp.com",
-  projectId:         "SEU_PROJETO",
-  storageBucket:     "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId:             "SEU_APP_ID"
-};
-// ══════════════════════════════════════════════════════════════
-
-// ⚠️ EDITE: senha do painel
-const SENHA = 'capibots2026';
+import { firebaseConfig } from "./firebase-config.js";
 
 const PRODUTOS_DEF = [
   { id:'chaveiro',  nome:'Chaveiro Capivara Brasil', emoji:'🔑', preco:10, estoqueInicial:30 },
@@ -207,24 +196,59 @@ const PRODUTOS_DEF = [
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-let pedidosRT = [];
-let estoqueRT = {};
+let pedidosRT   = [];
+let estoqueRT   = {};
 let filtroAtivo = 'todos';
+let usuarioLogado = null;
 
-// ── AUTH ─────────────────────────────────────────────────────
-window.login = function() {
-  if (document.getElementById('senha-input').value === SENHA) {
+// ── AUTH — consulta coleção 'usuarios' no Firestore ──────────
+window.login = async function() {
+  const username = document.getElementById('username-input').value.trim().toLowerCase();
+  const senha    = document.getElementById('senha-input').value;
+  const errEl    = document.getElementById('login-err');
+  const btn      = document.getElementById('btn-login');
+
+  if (!username || !senha) { errEl.style.display = 'block'; return; }
+
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+
+  try {
+    const snap = await getDoc(doc(db, 'usuarios', username));
+
+    if (!snap.exists()) throw new Error('not_found');
+
+    const data = snap.data();
+    if (data.senha !== senha)  throw new Error('wrong_password');
+    if (data.ativo === false)  throw new Error('inactive');
+
+    // Sucesso
+    usuarioLogado = { username, nome: data.nome || username };
+    sessionStorage.setItem('admin_usuario', JSON.stringify(usuarioLogado));
     document.getElementById('login-overlay').style.display = 'none';
-    sessionStorage.setItem('admin_ok', '1');
     iniciarListeners();
-  } else {
-    document.getElementById('login-err').style.display = 'block';
+
+  } catch (err) {
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Entrar →';
   }
 };
-window.logout = function() { sessionStorage.removeItem('admin_ok'); location.reload(); };
-if (sessionStorage.getItem('admin_ok')) {
-  document.getElementById('login-overlay').style.display = 'none';
-  iniciarListeners();
+
+window.logout = function() {
+  sessionStorage.removeItem('admin_usuario');
+  location.reload();
+};
+
+// Restaura sessão se ainda válida
+const sessao = sessionStorage.getItem('admin_usuario');
+if (sessao) {
+  try {
+    usuarioLogado = JSON.parse(sessao);
+    document.getElementById('login-overlay').style.display = 'none';
+    iniciarListeners();
+  } catch(e) { sessionStorage.removeItem('admin_usuario'); }
 }
 
 // ── LISTENERS TEMPO REAL ─────────────────────────────────────
