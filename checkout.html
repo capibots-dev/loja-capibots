@@ -229,22 +229,9 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getFirestore, collection, doc, runTransaction, addDoc, serverTimestamp, getDoc }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { firebaseConfig, lojaConfig } from "./firebase-config.js";
 
-// ══════════════════════════════════════════════════════════════
-// ⚠️  MESMA CONFIGURAÇÃO DO index.html
-// ══════════════════════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "SUA_API_KEY",
-  authDomain:        "SEU_PROJETO.firebaseapp.com",
-  projectId:         "SEU_PROJETO",
-  storageBucket:     "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId:             "SEU_APP_ID"
-};
-// ══════════════════════════════════════════════════════════════
-
-// ⚠️ EDITE: chave PIX real da equipe
-const PIX_CHAVE = 'capibots@escola.com.br';
+const PIX_CHAVE = lojaConfig.pixChave;
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
