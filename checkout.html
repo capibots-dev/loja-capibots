@@ -137,6 +137,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
 }
 
 @media(max-width:500px){.form-row{grid-template-columns:1fr;}.page{padding:1.25rem 1rem 3rem;}}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -176,7 +177,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
       <div class="card-tit">👤 Seus Dados</div>
       <div class="form-row">
         <div class="fg"><label>Nome completo *</label><input type="text" id="nome" placeholder="Seu nome completo" required></div>
-        <div class="fg"><label>Turma / Série *</label><input type="text" id="turma" placeholder="Ex: 3º A" required></div>
+        <div class="fg"><label>Turma / Série</label><input type="text" id="turma" placeholder="Ex: 3º A"></div>
       </div>
       <div class="form-row">
         <div class="fg"><label>WhatsApp *</label><input type="tel" id="whatsapp" placeholder="(34) 9xxxx-xxxx" required></div>
@@ -188,20 +189,19 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
     <div class="card">
       <div class="card-tit">💸 Pagamento via PIX</div>
       <div class="pix-box">
-        <div class="pix-qr">
-          <!-- Substitua pelo seu QR Code real: <img src="qrcode-pix.png" alt="QR Code PIX"> -->
-          <div class="qr-placeholder">
-            <span style="font-size:36px">📱</span>
-            <span>QR Code PIX</span>
-            <span style="font-size:10px;color:#bbb">(substitua pela imagem real)</span>
+        <div class="pix-qr" id="pix-qr-wrap">
+          <div class="qr-placeholder" id="qr-loading">
+            <div style="width:28px;height:28px;border:3px solid #e0d060;border-top-color:#a07800;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:6px"></div>
+            <span style="font-size:12px;color:#a07800">Gerando QR Code...</span>
           </div>
+          <canvas id="qr-canvas" style="display:none;width:100%;height:100%;border-radius:8px"></canvas>
         </div>
         <div class="pix-chave-label">Chave PIX da equipe Capibots:</div>
-        <div class="pix-chave" id="pix-chave-txt" onclick="copiarChave()">capibots@escola.com.br</div>
+        <div class="pix-chave" id="pix-chave-txt" onclick="copiarChave()">carregando...</div>
         <div class="pix-valor" id="pix-valor-txt">R$ 0</div>
-        <button class="copy-btn" onclick="copiarChave()">📋 Copiar chave PIX</button>
+        <button class="copy-btn" id="copy-btn" onclick="copiarChave()">📋 Copiar chave PIX</button>
         <div class="pix-instrucoes">
-          Abra seu app bancário → PIX → Pagar → cole a chave ou escaneie o QR Code.<br>
+          Abra seu app bancário → <strong>PIX → Pagar</strong> → escaneie o QR Code ou cole a chave.<br>
           Após pagar, clique em <strong>"Confirmar Pagamento"</strong> abaixo.
         </div>
       </div>
@@ -225,13 +225,13 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   </div>
 </div>
 
+<!-- QRCode.js library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, doc, runTransaction, addDoc, serverTimestamp, getDoc }
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, addDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-import { firebaseConfig, lojaConfig } from "./firebase-config.js";
-
-const PIX_CHAVE = lojaConfig.pixChave;
+import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -242,12 +242,9 @@ try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } 
 const itens = Object.values(carrinho);
 const total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
 
-// Atualiza exibições
-document.getElementById('pix-chave-txt').textContent = PIX_CHAVE;
-document.getElementById('pix-valor-txt').textContent  = 'R$ ' + total;
-document.getElementById('total-display').textContent  = 'R$ ' + total;
+document.getElementById('pix-valor-txt').textContent = 'R$ ' + total;
+document.getElementById('total-display').textContent = 'R$ ' + total;
 
-// Resumo
 const resumoEl = document.getElementById('resumo-items');
 resumoEl.innerHTML = itens.length === 0
   ? '<p style="color:#999;font-size:13px">Carrinho vazio.</p>'
@@ -259,9 +256,141 @@ resumoEl.innerHTML = itens.length === 0
         <span class="pi-tot">R$ ${i.preco * i.qty}</span>
       </div>`).join('');
 
+// ── LÊ CHAVE PIX E TIPO DO FIRESTORE ─────────────────────────
+let PIX_CHAVE = '';
+let PIX_TIPO  = 'email'; // padrão
+async function carregarPixEGerarQR() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'loja'));
+    if (snap.exists()) {
+      PIX_CHAVE = snap.data().pix_chave || '';
+      PIX_TIPO  = snap.data().pix_tipo  || 'email';
+    }
+  } catch(e) {
+    console.warn('Não foi possível ler config/loja:', e.message);
+  }
+  document.getElementById('pix-chave-txt').textContent = PIX_CHAVE || '—';
+  if (PIX_CHAVE && total > 0) gerarQRCode(PIX_CHAVE, PIX_TIPO, total);
+  else mostrarErroQR();
+}
+carregarPixEGerarQR();
+
+// ── NORMALIZA CHAVE PIX CONFORME O TIPO ───────────────────────
+function normalizarChave(chave, tipo) {
+  // Remove espaços das bordas
+  chave = chave.trim();
+  switch (tipo) {
+    case 'telefone':
+      // Remove tudo que não for número
+      const nums = chave.replace(/\D/g, '');
+      // Garante prefixo +55 e formato +55DDDNNNNNNNNN
+      if (nums.startsWith('55')) return '+' + nums;
+      return '+55' + nums;
+    case 'cpf':
+      return chave.replace(/\D/g, ''); // só números
+    case 'cnpj':
+      return chave.replace(/\D/g, ''); // só números
+    case 'email':
+    case 'aleatoria':
+    default:
+      return chave; // entra direto
+  }
+}
+
+// ── GERAÇÃO DO PAYLOAD PIX (EMV/BRCode - BACEN) ───────────────
+function pixPayload(chave, tipo, valor, nome, cidade) {
+  // Normaliza a chave conforme o tipo
+  const chaveFmt = normalizarChave(chave, tipo);
+
+  // Limpa acentos e limita tamanho (exigência do BRCode)
+  nome   = (nome   || 'Capibots').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9 ]/g,'').trim().slice(0,25);
+  cidade = (cidade || 'Uberlandia').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9 ]/g,'').trim().slice(0,15);
+  const valorStr = valor.toFixed(2);
+
+  function tlv(id, val) {
+    return id + String(val.length).padStart(2,'0') + val;
+  }
+
+  // Merchant Account Info (tag 26): GUI + chave
+  const gui  = tlv('00','br.gov.bcb.pix') + tlv('01', chaveFmt);
+  const macc = tlv('26', gui);
+
+  const mcc     = tlv('52','0000');   // MCC
+  const currency= tlv('53','986');    // BRL
+  const amount  = tlv('54', valorStr);
+  const country = tlv('58','BR');
+  const mname   = tlv('59', nome);
+  const mcity   = tlv('60', cidade);
+  const addData = tlv('62', tlv('05','***')); // txid
+
+  const semCRC = '000201' + macc + mcc + currency + amount + country + mname + mcity + addData + '6304';
+  return semCRC + crc16(semCRC);
+}
+
+// CRC16-CCITT (polinômio 0x1021)
+function crc16(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+    }
+  }
+  return ((crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0'));
+}
+
+// ── RENDERIZA QR CODE ─────────────────────────────────────────
+function gerarQRCode(chave, tipo, valor) {
+  try {
+    const payload = pixPayload(chave, tipo, valor, 'Capibots', 'Uberlandia');
+    const canvas  = document.getElementById('qr-canvas');
+    const wrap    = document.getElementById('pix-qr-wrap');
+
+    // QRCode.js renderiza num div temporário, depois copiamos para canvas
+    const tmp = document.createElement('div');
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+
+    new QRCode(tmp, {
+      text:          payload,
+      width:         200,
+      height:        200,
+      colorDark:     '#111111',
+      colorLight:    '#ffffff',
+      correctLevel:  QRCode.CorrectLevel.M,
+    });
+
+    // QRCode.js cria um <img> dentro do div
+    setTimeout(() => {
+      const img = tmp.querySelector('img');
+      if (img) {
+        // Substitui o loading pelo img
+        document.getElementById('qr-loading').style.display = 'none';
+        const qrImg = document.createElement('img');
+        qrImg.src    = img.src;
+        qrImg.alt    = 'QR Code PIX';
+        qrImg.style  = 'width:100%;height:100%;object-fit:contain;border-radius:8px';
+        wrap.appendChild(qrImg);
+      } else {
+        mostrarErroQR();
+      }
+      document.body.removeChild(tmp);
+    }, 100);
+  } catch(e) {
+    console.error('Erro ao gerar QR Code:', e);
+    mostrarErroQR();
+  }
+}
+
+function mostrarErroQR() {
+  document.getElementById('qr-loading').innerHTML =
+    '<span style="font-size:11px;color:#dc2626">⚠️ Use a chave PIX abaixo</span>';
+}
+
 window.copiarChave = function() {
+  if (!PIX_CHAVE) return;
   navigator.clipboard.writeText(PIX_CHAVE).then(() => {
-    const btn = document.querySelector('.copy-btn');
+    const btn = document.getElementById('copy-btn');
     btn.textContent = '✓ Copiado!';
     setTimeout(() => btn.textContent = '📋 Copiar chave PIX', 2000);
   });
@@ -277,6 +406,36 @@ function gerarId() {
   return 'CAP-' + ts + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
 }
 
+// ── Verifica disponibilidade considerando pedidos comprometidos ──────────
+async function verificarDisponibilidade() {
+  // Busca pedidos que comprometem estoque (novo ou pagamento_confirmado)
+  const snaps = await getDocs(
+    query(collection(db, 'pedidos'),
+      where('status', 'in', ['novo', 'pagamento_confirmado']))
+  );
+  const comprometido = {};
+  snaps.forEach(d => {
+    (d.data().itens || []).forEach(i => {
+      comprometido[i.id] = (comprometido[i.id] || 0) + i.qty;
+    });
+  });
+
+  // Busca estoque físico
+  const estSnaps = await getDocs(collection(db, 'estoque'));
+  const estoqueF = {};
+  estSnaps.forEach(d => { estoqueF[d.id] = d.data().quantidade || 0; });
+
+  // Verifica cada item do carrinho
+  for (const item of itens) {
+    const fisico = estoqueF[item.id] ?? 0;
+    const comp   = comprometido[item.id] ?? 0;
+    const disp   = fisico - comp;
+    if (disp < item.qty) {
+      throw new Error(`Estoque insuficiente para "${item.nome}". Disponível: ${Math.max(0, disp)}, pedido: ${item.qty}.`);
+    }
+  }
+}
+
 window.confirmarPedido = async function() {
   const nome     = document.getElementById('nome').value.trim();
   const turma    = document.getElementById('turma').value.trim();
@@ -286,55 +445,36 @@ window.confirmarPedido = async function() {
   const errEl    = document.getElementById('stock-error');
 
   errEl.style.display = 'none';
-  if (!nome || !turma || !whatsapp) { alert('Preencha nome, turma e WhatsApp!'); return; }
+  if (!nome || !whatsapp) { alert('Preencha nome e WhatsApp!'); return; }
   if (!itens.length) { alert('Carrinho vazio!'); return; }
 
   const btn = document.getElementById('btn-enviar');
   btn.disabled = true;
-  btn.textContent = '⏳ Registrando pedido...';
+  btn.textContent = '⏳ Verificando disponibilidade...';
 
   try {
+    await verificarDisponibilidade();
+
+    btn.textContent = '⏳ Registrando pedido...';
     const idPedido = gerarId();
 
-    // ── TRANSAÇÃO ATÔMICA: decrementa estoque de todos os itens ──────────
-    await runTransaction(db, async (tx) => {
-      // Lê todos os docs de estoque necessários
-      const reads = await Promise.all(
-        itens.map(i => tx.get(doc(db, 'estoque', i.id)))
-      );
-
-      // Verifica disponibilidade
-      for (let k = 0; k < itens.length; k++) {
-        const snap = reads[k];
-        const item = itens[k];
-        if (!snap.exists()) throw new Error(`Produto ${item.nome} não encontrado no estoque.`);
-        const atual = snap.data().quantidade;
-        if (atual < item.qty) throw new Error(`Estoque insuficiente para: ${item.nome} (disponível: ${atual}).`);
-      }
-
-      // Decrementa cada item
-      for (let k = 0; k < itens.length; k++) {
-        const snap = reads[k];
-        const item = itens[k];
-        tx.update(doc(db, 'estoque', item.id), { quantidade: snap.data().quantidade - item.qty });
-      }
-
-      // Registra pedido
-      tx.set(doc(db, 'pedidos', idPedido), {
-        id: idPedido, nome, turma, whatsapp, email, obs,
-        itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
-        total, status: 'aguardando',
-        pix_chave: PIX_CHAVE,
-        criadoEm: serverTimestamp(),
-      });
+    // Cria pedido com status 'novo' — estoque físico NÃO é decrementado aqui
+    await addDoc(collection(db, 'pedidos'), {
+      id: idPedido,
+      nome, turma, whatsapp, email, obs,
+      itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
+      total,
+      status: 'novo',   // máquina de status: novo → pagamento_confirmado → entregue
+      pix_chave: PIX_CHAVE,  // chave lida do Firestore config/loja
+      criadoEm: serverTimestamp(),
     });
 
-    // Sucesso
     sessionStorage.removeItem('capibots_cart');
     document.getElementById('form-section').style.display = 'none';
     document.getElementById('confirmacao').style.display  = 'block';
     document.getElementById('pedido-id-display').textContent = idPedido;
-    document.querySelectorAll('.step').forEach((s,i) => s.className = 'step ' + (i < 3 ? 'done' : 'active'));
+    document.querySelectorAll('.step').forEach((s,i) =>
+      s.className = 'step ' + (i < 3 ? 'done' : 'active'));
 
   } catch (err) {
     console.error(err);

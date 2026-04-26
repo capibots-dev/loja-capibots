@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produto · Lojinha Capibots</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde:#2d9e4f;--verde-escuro:#1a6130;--verde-claro:#e8f8ee;
+  --laranja:#f07020;--laranja-escuro:#b85010;--laranja-claro:#fff0e6;
+  --amarelo:#FFD700;--preto:#111111;
+  --bg:#f5f6f3;--text:#1a1a1a;--text-muted:#666;
+  --border:rgba(0,0,0,0.09);--radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* NAV */
+.nav-bar{
+  background:rgba(17,17,17,0.97);backdrop-filter:blur(8px);
+  padding:0.7rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(240,112,32,0.3);
+  position:sticky;top:0;z-index:50;
+}
+.nav-left{display:flex;align-items:center;gap:12px;}
+.nav-logo{width:30px;height:30px;object-fit:contain;}
+.nav-logo-txt{font-family:'Baloo 2',sans-serif;font-weight:900;font-size:16px;color:#fff;}
+.nav-logo-txt span{color:var(--laranja);}
+.nav-back{color:rgba(255,255,255,0.6);text-decoration:none;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;transition:color .15s;}
+.nav-back:hover{color:var(--laranja);}
+.cart-btn{background:var(--laranja);border:none;border-radius:50px;padding:7px 16px;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .15s;}
+.cart-btn:hover{background:var(--laranja-escuro);}
+.cart-count{background:#fff;color:var(--laranja);font-size:10px;font-weight:900;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem 1rem;gap:12px;color:var(--text-muted);}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--laranja);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* LAYOUT */
+.page{max-width:960px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);margin-bottom:1.5rem;}
+.breadcrumb a{color:var(--laranja);text-decoration:none;}
+.breadcrumb a:hover{text-decoration:underline;}
+
+.produto-layout{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:start;}
+
+/* GALERIA */
+.galeria{position:sticky;top:80px;}
+.galeria-main{
+  border-radius:var(--radius);overflow:hidden;
+  background:#fff;border:1.5px solid var(--border);
+  aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+  cursor:zoom-in;position:relative;margin-bottom:10px;
+}
+.galeria-main img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.galeria-main:hover img{transform:scale(1.04);}
+.galeria-main .emoji-placeholder{font-size:96px;}
+.zoom-hint{
+  position:absolute;bottom:10px;right:10px;
+  background:rgba(0,0,0,0.55);color:#fff;
+  font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;
+  pointer-events:none;opacity:0;transition:opacity .2s;
+}
+.galeria-main:hover .zoom-hint{opacity:1;}
+
+.galeria-thumbs{display:flex;gap:8px;flex-wrap:wrap;}
+.thumb{
+  width:64px;height:64px;border-radius:10px;overflow:hidden;
+  border:2px solid transparent;cursor:pointer;
+  background:#fff;flex-shrink:0;
+  transition:border-color .15s,transform .15s;
+}
+.thumb:hover{transform:scale(1.06);}
+.thumb.ativo{border-color:var(--laranja);}
+.thumb img{width:100%;height:100%;object-fit:cover;}
+.thumb .thumb-emoji{display:flex;align-items:center;justify-content:center;height:100%;font-size:28px;}
+
+/* INFOS */
+.produto-info{}
+.prod-tag{display:inline-block;background:var(--laranja);color:#fff;font-size:11px;font-weight:800;padding:3px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.prod-nome{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--preto);line-height:1.1;margin-bottom:8px;}
+.prod-preco{font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:900;color:var(--laranja);margin-bottom:4px;}
+.prod-estoque{font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;}
+.prod-estoque.ok{color:var(--verde);font-weight:700;}
+.prod-estoque.esgotado{color:#dc2626;font-weight:700;}
+
+.prod-desc{
+  font-size:15px;line-height:1.7;color:var(--text-muted);
+  margin-bottom:1.5rem;
+  padding-bottom:1.5rem;
+  border-bottom:1px solid var(--border);
+}
+
+/* QUANTIDADE */
+.qty-section{margin-bottom:1.25rem;}
+.qty-label{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+.qty-ctrl{display:flex;align-items:center;gap:10px;}
+.qty-btn-g{
+  background:var(--laranja-claro);border:1.5px solid var(--laranja);
+  border-radius:10px;width:38px;height:38px;
+  font-size:20px;font-weight:700;color:var(--laranja-escuro);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.qty-btn-g:hover{background:var(--laranja);color:#fff;}
+.qty-btn-g:disabled{opacity:.3;cursor:not-allowed;}
+.qty-num-g{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:900;min-width:36px;text-align:center;}
+
+.btn-add-grande{
+  width:100%;background:var(--laranja);color:#fff;border:none;border-radius:50px;
+  padding:16px;font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;
+  cursor:pointer;transition:background .15s,transform .1s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:10px;
+}
+.btn-add-grande:hover{background:var(--laranja-escuro);transform:scale(1.02);}
+.btn-add-grande:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+
+.btn-ver-carrinho{
+  width:100%;background:transparent;color:var(--laranja);
+  border:2px solid var(--laranja);border-radius:50px;
+  padding:12px;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;
+  cursor:pointer;transition:background .15s;display:none;
+}
+.btn-ver-carrinho:hover{background:var(--laranja-claro);}
+.btn-ver-carrinho.visivel{display:block;}
+
+/* CHIPS INFO */
+.chips-info{display:flex;flex-wrap:wrap;gap:8px;margin-top:1.25rem;}
+.chip-info{
+  background:var(--verde-claro);border:1px solid rgba(45,158,79,0.2);
+  color:var(--verde-escuro);
+  font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;
+  display:flex;align-items:center;gap:5px;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:2rem;left:50%;
+  transform:translateX(-50%) translateY(100px);
+  background:var(--preto);color:#fff;
+  padding:11px 22px;border-radius:50px;
+  font-weight:700;font-size:13px;z-index:999;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 8px 32px rgba(0,0,0,.3);white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* LIGHTBOX */
+.lightbox{
+  position:fixed;inset:0;background:rgba(0,0,0,0.92);
+  z-index:500;display:none;align-items:center;justify-content:center;
+  cursor:zoom-out;
+}
+.lightbox.open{display:flex;}
+.lightbox img{
+  max-width:90vw;max-height:88vh;border-radius:12px;
+  object-fit:contain;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);
+}
+.lb-close{
+  position:absolute;top:1.25rem;right:1.25rem;
+  background:rgba(255,255,255,0.15);border:none;border-radius:50%;
+  width:40px;height:40px;color:#fff;font-size:20px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.lb-close:hover{background:rgba(255,255,255,.3);}
+.lb-prev,.lb-next{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,0.15);border:none;border-radius:50%;
+  width:44px;height:44px;color:#fff;font-size:22px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.lb-prev{left:1.25rem;}
+.lb-next{right:1.25rem;}
+.lb-prev:hover,.lb-next:hover{background:rgba(255,255,255,.3);}
+.lb-counter{
+  position:absolute;bottom:1.25rem;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,.7);font-size:13px;font-weight:700;
+}
+
+/* PRODUTOS RELACIONADOS */
+.relacionados{margin-top:3rem;}
+.sec-title{font-family:'Baloo 2',sans-serif;font-size:20px;font-weight:900;color:var(--preto);margin-bottom:1.25rem;}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;}
+.rel-card{
+  background:#fff;border-radius:14px;border:1.5px solid var(--border);
+  overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;
+  text-decoration:none;color:inherit;display:block;
+}
+.rel-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+.rel-visual{height:90px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--laranja-claro);}
+.rel-visual img{width:100%;height:100%;object-fit:cover;}
+.rel-body{padding:10px 12px;}
+.rel-nome{font-weight:800;font-size:13px;line-height:1.2;margin-bottom:2px;}
+.rel-preco{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;color:var(--laranja);}
+
+@media(max-width:640px){
+  .produto-layout{grid-template-columns:1fr;}
+  .galeria{position:static;}
+  .page{padding:1.25rem 1rem 4rem;}
+  .prod-nome{font-size:22px;}
+  .prod-preco{font-size:28px;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <div class="nav-left">
+    <img src="logo-capibots.png" alt="Logo" class="nav-logo">
+    <span class="nav-logo-txt"><span>Capi</span>bots</span>
+    <a href="index.html" class="nav-back">← Voltar à loja</a>
+  </div>
+  <button class="cart-btn" onclick="irParaCarrinho()">
+    🛒 <span class="cart-count" id="cart-count">0</span>
+  </button>
+</nav>
+
+<div id="conteudo-loading" class="loading">
+  <div class="spinner"></div>
+  Carregando produto...
+</div>
+
+<div id="conteudo-produto" style="display:none">
+  <div class="page">
+    <div class="breadcrumb">
+      <a href="index.html">Loja</a> › <span id="bc-nome">Produto</span>
+    </div>
+
+    <div class="produto-layout">
+
+      <!-- GALERIA -->
+      <div class="galeria">
+        <div class="galeria-main" id="galeria-main" onclick="abrirLightbox(imagemAtiva)">
+          <div class="emoji-placeholder" id="main-emoji"></div>
+          <img id="main-img" src="" alt="" style="display:none">
+          <span class="zoom-hint">🔍 Ampliar</span>
+        </div>
+        <div class="galeria-thumbs" id="galeria-thumbs"></div>
+      </div>
+
+      <!-- INFOS -->
+      <div class="produto-info">
+        <div class="prod-tag" id="prod-tag"></div>
+        <div class="prod-nome" id="prod-nome"></div>
+        <div class="prod-preco" id="prod-preco"></div>
+        <div class="prod-estoque" id="prod-estoque"></div>
+        <div class="prod-desc" id="prod-desc"></div>
+
+        <div class="qty-section">
+          <div class="qty-label">Quantidade</div>
+          <div class="qty-ctrl">
+            <button class="qty-btn-g" id="qty-menos" onclick="mudaQty(-1)">−</button>
+            <span class="qty-num-g" id="qty-num">1</span>
+            <button class="qty-btn-g" id="qty-mais" onclick="mudaQty(1)">+</button>
+          </div>
+        </div>
+
+        <button class="btn-add-grande" id="btn-add" onclick="addAoCarrinho()">
+          🛒 Adicionar ao Carrinho
+        </button>
+        <button class="btn-ver-carrinho" id="btn-carrinho" onclick="irParaCheckout()">
+          Finalizar Pedido →
+        </button>
+
+        <div class="chips-info">
+          <span class="chip-info">🏫 Retirada na escola</span>
+          <span class="chip-info">💸 Pagamento via PIX</span>
+          <span class="chip-info">📦 Estoque em tempo real</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RELACIONADOS -->
+    <div class="relacionados">
+      <div class="sec-title">🛍️ Outros Produtos</div>
+      <div class="rel-grid" id="rel-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="fecharLightbox()">
+  <button class="lb-close" onclick="fecharLightbox()">✕</button>
+  <button class="lb-prev" onclick="event.stopPropagation();navLightbox(-1)">‹</button>
+  <img id="lb-img" src="" alt="">
+  <button class="lb-next" onclick="event.stopPropagation();navLightbox(1)">›</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── LÊ ID DA URL ────────────────────────────────────────────
+const idProduto = new URLSearchParams(window.location.search).get('id');
+if (!idProduto) window.location.href = 'index.html';
+
+// ── CARRINHO ─────────────────────────────────────────────────
+let carrinho = {};
+try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } catch(e){}
+function salvarCarrinho() { sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho)); }
+function atualizarContadorCarrinho() {
+  const count = Object.values(carrinho).reduce((s,i) => s+i.qty, 0);
+  document.getElementById('cart-count').textContent = count;
+  const btnC = document.getElementById('btn-carrinho');
+  if (count > 0) btnC.classList.add('visivel'); else btnC.classList.remove('visivel');
+}
+atualizarContadorCarrinho();
+
+// ── GALERIA ───────────────────────────────────────────────────
+let imagens     = [];
+let imagemAtiva = 0;
+let qtySelecionada = 1;
+let produtoAtual   = null;
+
+function selecionarImagem(idx) {
+  imagemAtiva = idx;
+  const mainImg   = document.getElementById('main-img');
+  const mainEmoji = document.getElementById('main-emoji');
+  if (imagens.length > 0) {
+    mainImg.src = imagens[idx];
+    mainImg.style.display = 'block';
+    mainEmoji.style.display = 'none';
+  }
+  document.querySelectorAll('.thumb').forEach((t,i) => t.classList.toggle('ativo', i === idx));
+}
+
+window.abrirLightbox = function(idx) {
+  if (!imagens.length) return;
+  imagemAtiva = idx;
+  document.getElementById('lb-img').src = imagens[idx];
+  document.getElementById('lb-counter').textContent = `${idx+1} / ${imagens.length}`;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+window.fecharLightbox = function() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+};
+window.navLightbox = function(dir) {
+  imagemAtiva = (imagemAtiva + dir + imagens.length) % imagens.length;
+  document.getElementById('lb-img').src = imagens[imagemAtiva];
+  document.getElementById('lb-counter').textContent = `${imagemAtiva+1} / ${imagens.length}`;
+};
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') fecharLightbox();
+  if (e.key === 'ArrowLeft')  navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
+
+// ── QUANTIDADE ─────────────────────────────────────────────────
+window.mudaQty = function(delta) {
+  const max = (produtoAtual?.quantidade ?? 1) - (carrinho[idProduto]?.qty || 0);
+  qtySelecionada = Math.max(1, Math.min(qtySelecionada + delta, max));
+  document.getElementById('qty-num').textContent = qtySelecionada;
+  document.getElementById('qty-menos').disabled = qtySelecionada <= 1;
+  document.getElementById('qty-mais').disabled  = qtySelecionada >= max;
+};
+
+// ── ADD CARRINHO ───────────────────────────────────────────────
+window.addAoCarrinho = function() {
+  if (!produtoAtual) return;
+  const p = produtoAtual;
+  if (carrinho[p.id]) carrinho[p.id].qty += qtySelecionada;
+  else carrinho[p.id] = { id:p.id, nome:p.nome, emoji:p.emoji||'🛍️', preco:p.preco, qty:qtySelecionada };
+  salvarCarrinho();
+  atualizarContadorCarrinho();
+  atualizarBotao();
+  showToast(`✅ ${qtySelecionada}× ${p.nome} adicionado!`);
+  qtySelecionada = 1;
+  document.getElementById('qty-num').textContent = 1;
+};
+
+window.irParaCarrinho   = function() { window.location.href = 'index.html'; };
+window.irParaCheckout   = function() { window.location.href = 'checkout.html'; };
+
+function atualizarBotao() {
+  const p   = produtoAtual;
+  const qt  = p?.quantidade ?? 0;
+  const jac = carrinho[idProduto]?.qty || 0;
+  const disp = qt - jac;
+  const btn  = document.getElementById('btn-add');
+  btn.disabled = disp <= 0;
+  btn.textContent = disp > 0 ? `🛒 Adicionar ao Carrinho` : 'Esgotado';
+  document.getElementById('qty-mais').disabled  = qtySelecionada >= disp;
+  document.getElementById('qty-menos').disabled = qtySelecionada <= 1;
+
+  const estEl = document.getElementById('prod-estoque');
+  estEl.textContent = disp > 0 ? `${disp} unidades disponíveis` : 'Produto esgotado';
+  estEl.className   = 'prod-estoque ' + (disp > 0 ? 'ok' : 'esgotado');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── CARREGA PRODUTO ────────────────────────────────────────────
+async function carregarProduto() {
+  try {
+    const snap = await getDoc(doc(db, 'estoque', idProduto));
+    if (!snap.exists()) { window.location.href = 'index.html'; return; }
+
+    const p = { id: snap.id, ...snap.data() };
+    produtoAtual = p;
+
+    document.title = `${p.nome} · Lojinha Capibots`;
+    document.getElementById('bc-nome').textContent   = p.nome;
+    document.getElementById('prod-tag').textContent  = p.tag || '⚽ Copa 2026';
+    document.getElementById('prod-nome').textContent = p.nome;
+    document.getElementById('prod-preco').textContent = `R$ ${p.preco}`;
+    document.getElementById('prod-desc').textContent  = p.desc || '';
+
+    atualizarBotao();
+
+    // Galeria de imagens
+    imagens = Array.isArray(p.imagens) ? p.imagens : [];
+    const mainImg   = document.getElementById('main-img');
+    const mainEmoji = document.getElementById('main-emoji');
+    const thumbsEl  = document.getElementById('galeria-thumbs');
+
+    if (imagens.length > 0) {
+      mainImg.src = imagens[0];
+      mainImg.style.display = 'block';
+      mainEmoji.style.display = 'none';
+      mainImg.alt = p.nome;
+
+      thumbsEl.innerHTML = imagens.map((src, i) => `
+        <div class="thumb ${i===0?'ativo':''}" onclick="selecionarImagem(${i})">
+          <img src="${src}" alt="${p.nome} foto ${i+1}"
+            onerror="this.parentElement.style.display='none'">
+        </div>`).join('');
+    } else {
+      mainEmoji.textContent = p.emoji || '🛍️';
+      mainEmoji.style.display = 'block';
+      mainImg.style.display   = 'none';
+      document.getElementById('galeria-main').style.cursor = 'default';
+    }
+
+    // Mostra conteúdo
+    document.getElementById('conteudo-loading').style.display  = 'none';
+    document.getElementById('conteudo-produto').style.display  = 'block';
+
+    // Carrega relacionados
+    carregarRelacionados(p.id);
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('conteudo-loading').innerHTML =
+      '<p style="color:#dc2626">⚠️ Erro ao carregar produto.</p>';
+  }
+}
+
+window.selecionarImagem = selecionarImagem;
+
+// ── RELACIONADOS ───────────────────────────────────────────────
+async function carregarRelacionados(idAtual) {
+  const snap = await getDocs(collection(db, 'estoque'));
+  const outros = snap.docs.filter(d => d.id !== idAtual).map(d => ({ id:d.id, ...d.data() }));
+  const VISUAL = {
+    'chaveiro':  'cv-laranja','pin-crocs':'cv-verde',
+    'pulseira':  'cv-amarelo','lapis':'cv-escuro',
+  };
+  document.getElementById('rel-grid').innerHTML = outros.map(p => {
+    const thumb = (p.imagens && p.imagens.length)
+      ? `<img src="${p.imagens[0]}" alt="${p.nome}" style="width:100%;height:100%;object-fit:cover;">`
+      : p.emoji || '🛍️';
+    const bgClass = VISUAL[p.id] || 'cv-laranja';
+    return `
+    <a class="rel-card" href="produto.html?id=${p.id}">
+      <div class="rel-visual ${!p.imagens?.length ? bgClass : ''}">${thumb}</div>
+      <div class="rel-body">
+        <div class="rel-nome">${p.nome}</div>
+        <div class="rel-preco">R$ ${p.preco}</div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+carregarProduto();
+</script>
+</body>
+</html>
