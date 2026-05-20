@@ -652,8 +652,10 @@ onSnapshot(collection(db, 'estoque'), (snap) => {
   snap.forEach(d => {
     if (d.id === 'vaquinha') {
       vaquinhaRT = { id: d.id, ...d.data() };
-    } else {
+    } else if (d.data().ativo !== false) {
       produtosRT[d.id] = { id: d.id, ...(VISUAL[d.id] || {}), ...d.data() };
+    } else {
+      delete produtosRT[d.id];
     }
   });
   renderProdutos();
@@ -783,7 +785,6 @@ function renderProdutos() {
       <div class="card-body">
         <a href="produto.html?id=${p.id}" style="text-decoration:none;color:inherit">
           <div class="card-nome">${p.nome}</div>
-          <div class="card-desc">${p.desc || ''}</div>
         </a>
         <div class="card-footer">
           <div>

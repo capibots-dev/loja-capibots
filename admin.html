@@ -623,46 +623,53 @@ function renderEstoque() {
     return;
   }
   document.getElementById('est-grid').innerHTML = produtos.map(p => {
-    const qtd  = typeof p.quantidade === 'number' ? p.quantidade : 0;
+    const ini  = p.estoqueInicial ?? 0;
+    const qtd  = typeof p.quantidade === 'number' ? p.quantidade : ini;
     const comp = comprometido[p.id] || 0;
     const disp = Math.max(0, qtd - comp);
-    const ini  = p.estoqueInicial ?? qtd;
     const custo = typeof p.custoUnitario === 'number' ? p.custoUnitario : '';
     const pct  = ini > 0 ? Math.round((qtd / ini) * 100) : 0;
     const bc   = pct <= 20 ? 'bx' : pct <= 50 ? 'med' : '';
     const imgs = Array.isArray(p.imagens) ? p.imagens : [];
+    const totalEntradas  = entradasRT.filter(e=>e.produtoId===p.id).reduce((s,e)=>s+(e.quantidade||0),0);
+    const totalEntregues = pedidosRT.filter(o=>o.status==='entregue').flatMap(o=>o.itens||[]).filter(i=>i.id===p.id).reduce((s,i)=>s+i.qty,0);
     const fisicoBadge = p.fisico === false
-      ? `<span style="background:#ede9fe;color:#5b21b6;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px">Não físico</span>`
+      ? `<span style="background:#ede9fe;color:#5b21b6;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px">Virtual</span>`
       : '';
-    return `<div class="est-card">
-      <div class="est-top"><span class="est-em">${p.emoji||'📦'}</span><span class="est-nm">${p.nome||p.id}${fisicoBadge}</span></div>
-      <div class="est-bar-wrap"><div class="est-bar ${bc}" style="width:${Math.min(pct,100)}%"></div></div>
-      <div class="est-nums" style="margin-bottom:8px"><span>0</span><span>${ini} inicial</span></div>
-      <div class="est-counters">
-        <div class="est-ct">
-          <div class="est-ct-val">${qtd}</div>
-          <div class="est-ct-lbl">Em estoque</div>
+    const ativoBtn = p.ativo !== false
+      ? `<button onclick="toggleAtivo('${p.id}',true)" style="margin-left:auto;background:var(--verde-claro);color:var(--verde-escuro);border:1px solid var(--verde);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🟢 Ativo</button>`
+      : `<button onclick="toggleAtivo('${p.id}',false)" style="margin-left:auto;background:var(--vc);color:var(--vm);border:1px solid var(--vm);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⛔ Inativo</button>`;
+    return `<div class="est-card" style="${p.ativo===false?'opacity:.6':''}">
+      <div class="est-top" style="flex-wrap:wrap;gap:6px">
+        <span class="est-em">${p.emoji||'📦'}</span>
+        <span class="est-nm">${p.nome||p.id}${fisicoBadge}</span>
+        ${ativoBtn}
+      </div>
+      <div class="est-bar-wrap" style="margin-top:8px"><div class="est-bar ${bc}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:11px">
+        <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:center;text-align:center;gap:2px">
+          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif">${ini}</div><div style="color:var(--text-muted)">Inicial</div></div>
+          <div style="color:var(--verde);font-weight:900;font-size:13px">+</div>
+          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--verde)">${totalEntradas}</div><div style="color:var(--text-muted)">Entradas</div></div>
+          <div style="color:var(--vm);font-weight:900;font-size:13px">−</div>
+          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--laranja)">${totalEntregues}</div><div style="color:var(--text-muted)">Entregues</div></div>
+          <div style="font-weight:900;font-size:13px">=</div>
+          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif">${qtd}</div><div style="color:var(--text-muted)">Em estoque</div></div>
         </div>
-        <div class="est-ct">
-          <div class="est-ct-val" style="color:var(--laranja)">${comp}</div>
-          <div class="est-ct-lbl">Comprometido</div>
-        </div>
-        <div class="est-ct">
-          <div class="est-ct-val" style="color:var(--verde)">${disp}</div>
-          <div class="est-ct-lbl">Disponível</div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
+          <span style="color:var(--laranja);font-weight:700">⏳ Comprometido: ${comp}</span>
+          <span style="color:var(--verde);font-weight:700">✅ Disponível: ${disp}</span>
         </div>
       </div>
       <div class="est-field-row">
         <div class="est-field">
-          <label>Estoque</label>
-          <input type="number" class="est-inp" id="est-${p.id}" value="${qtd}" min="0">
-        </div>
-        <div class="est-field">
           <label>Custo unit. (R$)</label>
           <input type="number" class="est-inp" id="custo-${p.id}" value="${custo}" min="0" step="0.01" placeholder="0,00">
         </div>
+        <div class="est-field" style="display:flex;flex-direction:column;justify-content:flex-end">
+          <button class="est-sav" id="sav-${p.id}" onclick="salvarCusto('${p.id}')">💾 Salvar custo</button>
+        </div>
       </div>
-      <button class="est-sav" id="sav-${p.id}" onclick="salvarEstoque('${p.id}')">💾 Salvar</button>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
         <div style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px">Imagens (um caminho por linha)</div>
         <textarea class="est-inp" id="img-${p.id}" rows="3"
@@ -712,21 +719,26 @@ function renderEstoque() {
   }).join('');
 }
 
-window.salvarEstoque = async function(id) {
-  const val   = parseInt(document.getElementById('est-'+id).value);
+window.salvarCusto = async function(id) {
   const custo = parseFloat(document.getElementById('custo-'+id).value);
-  if (isNaN(val)||val<0) return alert('Quantidade inválida!');
+  if (isNaN(custo)||custo<0) return alert('Custo inválido!');
   const btn = document.getElementById('sav-'+id);
   btn.disabled=true; btn.textContent='⏳ Salvando...';
   try {
-    const payload = { quantidade: val };
-    if (!isNaN(custo)&&custo>=0) payload.custoUnitario = custo;
-    await setDoc(doc(db,'estoque',id), payload, { merge:true });
+    await setDoc(doc(db,'estoque',id), { custoUnitario: custo }, { merge:true });
     btn.textContent='✅ Salvo!'; btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='💾 Salvar'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
+    setTimeout(()=>{ btn.textContent='💾 Salvar custo'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
   } catch(err) {
     alert('Erro: '+(err.code==='permission-denied'?'Permissão negada no Firestore.':err.message));
-    btn.disabled=false; btn.textContent='💾 Salvar';
+    btn.disabled=false; btn.textContent='💾 Salvar custo';
+  }
+};
+
+window.toggleAtivo = async function(id, currentlyAtivo) {
+  try {
+    await setDoc(doc(db,'estoque',id), { ativo: !currentlyAtivo }, { merge:true });
+  } catch(err) {
+    alert('Erro: '+err.message);
   }
 };
 
