@@ -653,7 +653,7 @@ onSnapshot(collection(db, 'estoque'), (snap) => {
     if (d.id === 'vaquinha') {
       vaquinhaRT = { id: d.id, ...d.data() };
     } else {
-      produtosRT[d.id] = { id: d.id, ...d.data(), ...(VISUAL[d.id] || {}) };
+      produtosRT[d.id] = { id: d.id, ...(VISUAL[d.id] || {}), ...d.data() };
     }
   });
   renderProdutos();

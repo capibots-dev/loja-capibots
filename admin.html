@@ -235,6 +235,38 @@ tr:hover td{background:#fafafa;}
     <!-- ESTOQUE -->
     <div class="secao" id="sec-estoque">
       <div class="ph"><h1><span class="live-dot"></span>📦 Estoque</h1></div>
+
+      <!-- FORM NOVO PRODUTO -->
+      <div class="entrada-form" style="margin-bottom:1.5rem">
+        <h2 style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+          ➕ Novo Produto
+          <button onclick="toggleFormNovoProduto()" id="btn-toggle-np"
+            style="background:var(--verde);color:#fff;border:none;border-radius:50px;padding:6px 18px;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:background .15s">
+            + Criar produto
+          </button>
+        </h2>
+        <div id="form-novo-produto" style="display:none;margin-top:1.1rem">
+          <div style="display:grid;grid-template-columns:1fr 1.5fr 70px 90px 110px;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:10px">
+            <div class="fg-e"><label>ID (slug único)</label><input type="text" id="np-id" placeholder="ex: camiseta-azul"></div>
+            <div class="fg-e"><label>Nome</label><input type="text" id="np-nome" placeholder="Camiseta Capibots Azul"></div>
+            <div class="fg-e"><label>Emoji</label><input type="text" id="np-emoji" placeholder="👕"></div>
+            <div class="fg-e"><label>Preço (R$)</label><input type="number" id="np-preco" min="0" step="0.01" placeholder="10"></div>
+            <div class="fg-e"><label>Estoque inicial</label><input type="number" id="np-estoque" min="0" placeholder="30"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
+            <div class="fg-e"><label>Descrição (opcional)</label><input type="text" id="np-desc" placeholder="Descrição curta do produto..."></div>
+            <div class="fg-e">
+              <label>Tipo</label>
+              <select id="np-fisico" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
+                <option value="true">🛍️ Produto físico</option>
+                <option value="false">💛 Virtual (vaquinha/doação)</option>
+              </select>
+            </div>
+            <button class="btn-add-entrada" onclick="criarProduto()">✅ Criar produto</button>
+          </div>
+        </div>
+      </div>
+
       <div class="est-grid" id="est-grid"></div>
     </div>
 
@@ -248,10 +280,6 @@ tr:hover td{background:#fafafa;}
             <label>Produto</label>
             <select id="ent-produto">
               <option value="">Selecione...</option>
-              <option value="chaveiro">🔑 Chaveiro Capivara Brasil</option>
-              <option value="pin-crocs">🩴 Pin Capivara p/ Crocs</option>
-              <option value="pulseira">📿 Pulseira Capivara Copa</option>
-              <option value="lapis">✏️ Lápis &amp; Lapiseira Capivara</option>
             </select>
           </div>
           <div class="fg-e">
@@ -320,13 +348,6 @@ import { getFirestore, collection, doc, getDoc, onSnapshot,
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const PRODUTOS_DEF = [
-  { id:'chaveiro',  nome:'Chaveiro Capivara Brasil',  emoji:'🔑', preco:10, estoqueInicial:30, fisico:true },
-  { id:'pin-crocs', nome:'Pin Capivara p/ Crocs',     emoji:'🩴', preco:10, estoqueInicial:25, fisico:true },
-  { id:'pulseira',  nome:'Pulseira Capivara Copa',    emoji:'📿', preco:10, estoqueInicial:40, fisico:true },
-  { id:'lapis',     nome:'Lápis & Lapiseira Capivara',emoji:'✏️', preco:10, estoqueInicial:50, fisico:true },
-];
-
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
@@ -391,8 +412,8 @@ function iniciarListeners() {
     renderPedidos(); renderRelatorio();
   });
   onSnapshot(collection(db, 'estoque'), snap => {
-    snap.forEach(d => { estoqueRT[d.id] = d.data(); });
-    renderEstoque();
+    snap.forEach(d => { estoqueRT[d.id] = { id: d.id, ...d.data() }; });
+    renderEstoque(); populateEntradaSelect();
   });
   onSnapshot(collection(db, 'entradas'), snap => {
     entradasRT = snap.docs
@@ -571,25 +592,31 @@ window.confirmarEntrega = async function() {
 // ── ESTOQUE ────────────────────────────────────────────────────
 function renderEstoque() {
   const comprometido = calcComprometido();
-  document.getElementById('est-grid').innerHTML = PRODUTOS_DEF.map(p => {
-    const meta   = estoqueRT[p.id] || {};
-    const fisico = typeof meta.quantidade === 'number' ? meta.quantidade : 0;
-    const comp   = comprometido[p.id] || 0;
-    const disp   = Math.max(0, fisico - comp);
-    const ini    = meta.estoqueInicial ?? p.estoqueInicial;
-    const custo  = typeof meta.custoUnitario === 'number' ? meta.custoUnitario : '';
-    const pct    = ini > 0 ? Math.round((fisico / ini) * 100) : 0;
-    const bc     = pct <= 20 ? 'bx' : pct <= 50 ? 'med' : '';
-    const imgs   = Array.isArray(meta.imagens) ? meta.imagens : [];
-
+  const produtos = Object.values(estoqueRT).sort((a,b)=>(a.nome||a.id).localeCompare(b.nome||b.id,'pt-BR'));
+  if (!produtos.length) {
+    document.getElementById('est-grid').innerHTML = '<p style="color:var(--text-muted);padding:1rem">Nenhum produto cadastrado ainda.</p>';
+    return;
+  }
+  document.getElementById('est-grid').innerHTML = produtos.map(p => {
+    const qtd  = typeof p.quantidade === 'number' ? p.quantidade : 0;
+    const comp = comprometido[p.id] || 0;
+    const disp = Math.max(0, qtd - comp);
+    const ini  = p.estoqueInicial ?? qtd;
+    const custo = typeof p.custoUnitario === 'number' ? p.custoUnitario : '';
+    const pct  = ini > 0 ? Math.round((qtd / ini) * 100) : 0;
+    const bc   = pct <= 20 ? 'bx' : pct <= 50 ? 'med' : '';
+    const imgs = Array.isArray(p.imagens) ? p.imagens : [];
+    const fisicoBadge = p.fisico === false
+      ? `<span style="background:#ede9fe;color:#5b21b6;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px">Não físico</span>`
+      : '';
     return `<div class="est-card">
-      <div class="est-top"><span class="est-em">${p.emoji}</span><span class="est-nm">${p.nome}</span></div>
+      <div class="est-top"><span class="est-em">${p.emoji||'📦'}</span><span class="est-nm">${p.nome||p.id}${fisicoBadge}</span></div>
       <div class="est-bar-wrap"><div class="est-bar ${bc}" style="width:${Math.min(pct,100)}%"></div></div>
       <div class="est-nums" style="margin-bottom:8px"><span>0</span><span>${ini} inicial</span></div>
       <div class="est-counters">
         <div class="est-ct">
-          <div class="est-ct-val">${fisico}</div>
-          <div class="est-ct-lbl">Físico</div>
+          <div class="est-ct-val">${qtd}</div>
+          <div class="est-ct-lbl">Em estoque</div>
         </div>
         <div class="est-ct">
           <div class="est-ct-val" style="color:var(--laranja)">${comp}</div>
@@ -602,8 +629,8 @@ function renderEstoque() {
       </div>
       <div class="est-field-row">
         <div class="est-field">
-          <label>Estoque físico</label>
-          <input type="number" class="est-inp" id="est-${p.id}" value="${fisico}" min="0">
+          <label>Estoque</label>
+          <input type="number" class="est-inp" id="est-${p.id}" value="${qtd}" min="0">
         </div>
         <div class="est-field">
           <label>Custo unit. (R$)</label>
@@ -631,8 +658,6 @@ window.salvarEstoque = async function(id) {
   try {
     const payload = { quantidade: val };
     if (!isNaN(custo)&&custo>=0) payload.custoUnitario = custo;
-    const def = PRODUTOS_DEF.find(p => p.id === id);
-    if (def) payload.fisico = def.fisico;
     await setDoc(doc(db,'estoque',id), payload, { merge:true });
     btn.textContent='✅ Salvo!'; btn.classList.add('ok');
     setTimeout(()=>{ btn.textContent='💾 Salvar'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
@@ -664,7 +689,7 @@ window.registrarEntrada = async function() {
   const obs    = document.getElementById('ent-obs').value.trim();
   if (!prodId) return alert('Selecione um produto!');
   if (!qty||qty<1) return alert('Quantidade inválida!');
-  const prod = PRODUTOS_DEF.find(p=>p.id===prodId);
+  const prod = estoqueRT[prodId];
   try {
     await updateDoc(doc(db,'estoque',prodId), { quantidade: increment(qty) });
     await addDoc(collection(db,'entradas'), {
@@ -708,12 +733,12 @@ function renderRelatorio() {
   const receita   = entregues.reduce((s,p)=>s+(p.total||0),0);
 
   const vnd = {};
-  PRODUTOS_DEF.forEach(p => {
-    const meta = estoqueRT[p.id]||{};
-    vnd[p.id]  = { ...p, qty:0, rec:0, custoUnit: typeof meta.custoUnitario==='number' ? meta.custoUnitario : null };
+  Object.values(estoqueRT).forEach(meta => {
+    vnd[meta.id] = { ...meta, qty:0, rec:0, custoUnit: typeof meta.custoUnitario==='number' ? meta.custoUnitario : null };
   });
   entregues.forEach(p=>(p.itens||[]).forEach(i=>{
-    if (vnd[i.id]) { vnd[i.id].qty+=i.qty; vnd[i.id].rec+=(i.preco||0)*i.qty; }
+    if (!vnd[i.id]) vnd[i.id] = { id:i.id, nome:i.nome, emoji:i.emoji||'', preco:i.preco||0, qty:0, rec:0, custoUnit:null };
+    vnd[i.id].qty+=i.qty; vnd[i.id].rec+=(i.preco||0)*i.qty;
   }));
 
   const temCusto   = Object.values(vnd).some(v=>v.custoUnit!==null);
@@ -811,6 +836,63 @@ window.salvarConfig = async function() {
     status.style.color = 'var(--vm)';
     status.style.display = 'block';
     btn.disabled = false; btn.textContent = '💾 Salvar configurações';
+  }
+};
+
+// ── PRODUTOS DINÂMICOS ─────────────────────────────────────────
+function populateEntradaSelect() {
+  const sel = document.getElementById('ent-produto');
+  if (!sel) return;
+  const val = sel.value;
+  const produtos = Object.values(estoqueRT).sort((a,b)=>(a.nome||a.id).localeCompare(b.nome||b.id,'pt-BR'));
+  sel.innerHTML = '<option value="">Selecione...</option>' +
+    produtos.map(p=>`<option value="${p.id}">${p.emoji||'📦'} ${p.nome||p.id}</option>`).join('');
+  if (val) sel.value = val;
+}
+
+window.toggleFormNovoProduto = function() {
+  const f = document.getElementById('form-novo-produto');
+  const btn = document.getElementById('btn-toggle-np');
+  const aberto = f.style.display !== 'none';
+  f.style.display = aberto ? 'none' : 'block';
+  btn.textContent = aberto ? '+ Criar produto' : '✕ Cancelar';
+};
+
+window.criarProduto = async function() {
+  const rawId  = document.getElementById('np-id').value.trim();
+  const id     = rawId.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  const nome   = document.getElementById('np-nome').value.trim();
+  const emoji  = document.getElementById('np-emoji').value.trim();
+  const preco  = parseFloat(document.getElementById('np-preco').value);
+  const qtdIni = parseInt(document.getElementById('np-estoque').value);
+  const fisico = document.getElementById('np-fisico').value === 'true';
+  const desc   = document.getElementById('np-desc').value.trim();
+
+  if (!id)             return alert('ID é obrigatório!');
+  if (!nome)           return alert('Nome é obrigatório!');
+  if (isNaN(preco)||preco<0)   return alert('Preço inválido!');
+  if (isNaN(qtdIni)||qtdIni<0) return alert('Estoque inicial inválido!');
+  if (estoqueRT[id])   return alert(`Já existe um produto com o ID "${id}".`);
+
+  try {
+    await setDoc(doc(db,'estoque',id), {
+      nome, emoji, preco,
+      quantidade:     qtdIni,
+      estoqueInicial: qtdIni,
+      fisico,
+      desc:    desc || null,
+      imagens: [],
+      criadoEm: serverTimestamp(),
+    });
+    ['np-id','np-nome','np-emoji','np-preco','np-estoque','np-desc'].forEach(f=>{
+      document.getElementById(f).value='';
+    });
+    document.getElementById('np-fisico').value = 'true';
+    document.getElementById('form-novo-produto').style.display = 'none';
+    document.getElementById('btn-toggle-np').textContent = '+ Criar produto';
+    alert(`✅ Produto "${nome}" criado!`);
+  } catch(err) {
+    alert('Erro ao criar produto: '+err.message);
   }
 };
 
