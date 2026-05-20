@@ -646,6 +646,7 @@ const VAQUINHA_META = 1500; // cotas totais
 
 let produtosRT = {};
 let carrinho   = {};
+try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } catch(e) {}
 let vaquinhaRT = null; // dados da vaquinha em tempo real
 
 onSnapshot(collection(db, 'estoque'), (snap) => {
@@ -720,6 +721,7 @@ window.adicionarCotasCarrinho = function() {
     id: 'vaquinha', nome: 'Cota — Vaquinha Tapete', emoji: '🐄',
     preco: 1, qty: n, fisico: false,
   };
+  sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
   fecharModalVaquinha();
   renderCarrinho();
   renderProdutos();
@@ -811,6 +813,7 @@ window.addCarrinho = function(id) {
   if (!prod || qt - jaNoCarrinho <= 0) return;
   if (carrinho[id]) carrinho[id].qty++;
   else carrinho[id] = { ...prod, qty: 1 };
+  sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
   renderProdutos();
   renderCarrinho();
   showToast(`${prod.emoji} ${prod.nome} adicionado!`);
@@ -822,6 +825,7 @@ window.removerUm = function(id) {
   if (!carrinho[id]) return;
   carrinho[id].qty--;
   if (carrinho[id].qty <= 0) delete carrinho[id];
+  sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
   renderProdutos();
   renderCarrinho();
 };

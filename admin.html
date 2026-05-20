@@ -234,65 +234,140 @@ tr:hover td{background:#fafafa;}
 
     <!-- ESTOQUE -->
     <div class="secao" id="sec-estoque">
-      <div class="ph"><h1><span class="live-dot"></span>📦 Estoque</h1></div>
 
-      <!-- FORM NOVO PRODUTO -->
-      <div class="entrada-form" style="margin-bottom:1.5rem">
-        <h2 style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
-          ➕ Novo Produto
-          <button onclick="toggleFormNovoProduto()" id="btn-toggle-np"
-            style="background:var(--verde);color:#fff;border:none;border-radius:50px;padding:6px 18px;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:background .15s">
-            + Criar produto
-          </button>
-        </h2>
-        <div id="form-novo-produto" style="display:none;margin-top:1.1rem">
-          <div style="display:grid;grid-template-columns:1fr 1.5fr 70px 90px 110px;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:10px">
-            <div class="fg-e"><label>ID (slug único)</label><input type="text" id="np-id" placeholder="ex: camiseta-azul"></div>
-            <div class="fg-e"><label>Nome</label><input type="text" id="np-nome" placeholder="Camiseta Capibots Azul"></div>
-            <div class="fg-e"><label>Emoji</label><input type="text" id="np-emoji" placeholder="👕"></div>
-            <div class="fg-e"><label>Preço (R$)</label><input type="number" id="np-preco" min="0" step="0.01" placeholder="10"></div>
-            <div class="fg-e"><label>Estoque inicial</label><input type="number" id="np-estoque" min="0" placeholder="30"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px">
-            <div class="fg-e"><label>Descrição (opcional)</label><input type="text" id="np-desc" placeholder="Descrição curta do produto..."></div>
-            <div class="fg-e">
-              <label>Tipo</label>
-              <select id="np-fisico" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
-                <option value="true">🛍️ Produto físico</option>
-                <option value="false">💛 Virtual (vaquinha/doação)</option>
-              </select>
-            </div>
-            <div class="fg-e">
-              <label>Fundo do card</label>
-              <select id="np-cor" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
-                <option value="">— Padrão —</option>
-                <option value="cv-laranja">🟠 Laranja</option>
-                <option value="cv-verde">🟢 Verde</option>
-                <option value="cv-amarelo">🟡 Amarelo</option>
-                <option value="cv-escuro">⚫ Escuro</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
-            <div class="fg-e">
-              <label>Tag (destaque)</label>
-              <input type="text" id="np-tag" placeholder="ex: ⚽ Copa 2026" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;transition:border-color .15s;width:100%">
-            </div>
-            <div class="fg-e">
-              <label>Cor da tag</label>
-              <select id="np-tagCor" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
-                <option value="tag-laranja">🟠 Laranja</option>
-                <option value="tag-verde">🟢 Verde</option>
-                <option value="tag-amarelo">🟡 Amarelo</option>
-                <option value="tag-preto">⚫ Preto</option>
-              </select>
-            </div>
-            <button class="btn-add-entrada" onclick="criarProduto()">✅ Criar produto</button>
-          </div>
+      <!-- LISTAGEM -->
+      <div id="est-lista">
+        <div class="ph">
+          <h1><span class="live-dot"></span>📦 Produtos</h1>
+          <button class="btn-add-entrada" onclick="abrirNovoProduto()">+ Novo produto</button>
+        </div>
+        <div class="tabela-wrap">
+          <div id="est-tabela-content"></div>
         </div>
       </div>
 
-      <div class="est-grid" id="est-grid"></div>
+      <!-- DETALHE / EDIÇÃO -->
+      <div id="est-detalhe" style="display:none">
+        <div class="ph" style="margin-bottom:1.25rem">
+          <button onclick="voltarLista()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 16px;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">← Voltar</button>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="det-status-label" style="font-size:13px;font-weight:700"></span>
+            <button id="det-btn-ativo" onclick="toggleAtivoDetalhe()" style="display:none;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer"></button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.25rem;align-items:start">
+
+          <!-- Coluna esquerda -->
+          <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+            <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.4rem">
+              <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);margin-bottom:1rem">📋 Informações básicas</div>
+              <div id="det-id-wrap" style="margin-bottom:.9rem">
+                <div class="fg-e">
+                  <label>ID do produto (slug único)</label>
+                  <input type="text" id="det-id" placeholder="ex: camiseta-azul" style="width:100%">
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:3px;display:block">Apenas letras minúsculas, números e hífens. Não pode ser alterado depois.</small>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 70px 100px;gap:10px;margin-bottom:.9rem">
+                <div class="fg-e"><label>Nome</label><input type="text" id="det-nome" placeholder="Nome do produto"></div>
+                <div class="fg-e"><label>Emoji</label><input type="text" id="det-emoji" placeholder="📦"></div>
+                <div class="fg-e"><label>Preço (R$)</label><input type="number" id="det-preco" min="0" step="0.01" placeholder="10"></div>
+              </div>
+              <div class="fg-e">
+                <label>Descrição (exibida na página do produto)</label>
+                <textarea id="det-desc" rows="3" placeholder="Descreva o produto..." style="width:100%;resize:vertical"></textarea>
+              </div>
+            </div>
+
+            <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.4rem">
+              <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);margin-bottom:1rem">🎨 Visual na loja</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.9rem">
+                <div class="fg-e">
+                  <label>Tipo</label>
+                  <select id="det-fisico">
+                    <option value="true">🛍️ Produto físico</option>
+                    <option value="false">💛 Virtual (vaquinha/doação)</option>
+                  </select>
+                </div>
+                <div class="fg-e">
+                  <label>Fundo do card</label>
+                  <select id="det-cor">
+                    <option value="">— Padrão —</option>
+                    <option value="cv-laranja">🟠 Laranja</option>
+                    <option value="cv-verde">🟢 Verde</option>
+                    <option value="cv-amarelo">🟡 Amarelo</option>
+                    <option value="cv-escuro">⚫ Escuro</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="fg-e">
+                  <label>Tag (destaque)</label>
+                  <input type="text" id="det-tag" placeholder="ex: ⚽ Copa 2026">
+                </div>
+                <div class="fg-e">
+                  <label>Cor da tag</label>
+                  <select id="det-tagCor">
+                    <option value="tag-laranja">🟠 Laranja</option>
+                    <option value="tag-verde">🟢 Verde</option>
+                    <option value="tag-amarelo">🟡 Amarelo</option>
+                    <option value="tag-preto">⚫ Preto</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Coluna direita -->
+          <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+            <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.4rem">
+              <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);margin-bottom:1rem">📦 Estoque</div>
+              <div id="det-ini-wrap" class="fg-e" style="margin-bottom:.9rem">
+                <label>Estoque inicial</label>
+                <input type="number" id="det-ini" min="0" placeholder="30">
+              </div>
+              <div id="det-breakdown" style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:.9rem;display:none">
+                <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:center;text-align:center;gap:2px;margin-bottom:8px">
+                  <div><div id="det-b-ini" style="font-size:16px;font-weight:900;font-family:'Baloo 2',sans-serif">—</div><div style="font-size:10px;color:var(--text-muted)">Inicial</div></div>
+                  <div style="color:var(--verde);font-weight:900;font-size:13px">+</div>
+                  <div><div id="det-b-ent" style="font-size:16px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--verde)">—</div><div style="font-size:10px;color:var(--text-muted)">Entradas</div></div>
+                  <div style="color:var(--vm);font-weight:900;font-size:13px">−</div>
+                  <div><div id="det-b-entr" style="font-size:16px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--laranja)">—</div><div style="font-size:10px;color:var(--text-muted)">Entregues</div></div>
+                  <div style="font-weight:900;font-size:13px">=</div>
+                  <div><div id="det-b-qtd" style="font-size:16px;font-weight:900;font-family:'Baloo 2',sans-serif">—</div><div style="font-size:10px;color:var(--text-muted)">Em estoque</div></div>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:6px;display:flex;justify-content:space-between;font-size:11px">
+                  <span style="color:var(--laranja);font-weight:700">⏳ Comprometido: <span id="det-b-comp">0</span></span>
+                  <span style="color:var(--verde);font-weight:700">✅ Disponível: <span id="det-b-disp">0</span></span>
+                </div>
+              </div>
+              <div class="fg-e">
+                <label>Custo unitário (R$)</label>
+                <input type="number" id="det-custo" min="0" step="0.01" placeholder="0,00">
+              </div>
+            </div>
+
+            <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.4rem">
+              <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);margin-bottom:1rem">🖼️ Imagens</div>
+              <div class="fg-e">
+                <label>Um caminho por linha</label>
+                <textarea id="det-imagens" rows="5" style="width:100%;font-family:monospace;font-size:11px;resize:vertical" placeholder="imagens/produto-1.jpg"></textarea>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;display:flex;gap:10px;justify-content:flex-end;padding-bottom:2rem">
+          <button onclick="voltarLista()" style="background:#f3f4f6;color:var(--text-muted);border:none;border-radius:50px;padding:12px 24px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Cancelar</button>
+          <button id="btn-salvar-produto" onclick="salvarProduto()" style="background:var(--laranja);color:#fff;border:none;border-radius:50px;padding:12px 32px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;cursor:pointer;transition:background .15s;box-shadow:0 3px 12px rgba(240,112,32,0.3)">💾 Salvar alterações</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ENTRADAS -->
@@ -382,6 +457,7 @@ let entradasRT = [];
 let filtroAtivo = 'todos';
 let usuarioLogado = null;
 let pedidoParaEntregar = null;
+let produtoEmEdicao = null;
 
 // ── AUTH ──────────────────────────────────────────────────────
 window.login = async function() {
@@ -616,162 +692,60 @@ window.confirmarEntrega = async function() {
 
 // ── ESTOQUE ────────────────────────────────────────────────────
 function renderEstoque() {
+  if (produtoEmEdicao !== null) {
+    atualizarBreakdownDetalhe();
+  } else {
+    renderEstoqueLista();
+  }
+}
+
+function renderEstoqueLista() {
   const comprometido = calcComprometido();
   const produtos = Object.values(estoqueRT).sort((a,b)=>(a.nome||a.id).localeCompare(b.nome||b.id,'pt-BR'));
   if (!produtos.length) {
-    document.getElementById('est-grid').innerHTML = '<p style="color:var(--text-muted);padding:1rem">Nenhum produto cadastrado ainda.</p>';
+    document.getElementById('est-tabela-content').innerHTML = '<div class="tabela-vazia">Nenhum produto cadastrado ainda.</div>';
     return;
   }
-  document.getElementById('est-grid').innerHTML = produtos.map(p => {
-    const ini  = p.estoqueInicial ?? 0;
-    const qtd  = typeof p.quantidade === 'number' ? p.quantidade : ini;
-    const comp = comprometido[p.id] || 0;
-    const disp = Math.max(0, qtd - comp);
-    const custo = typeof p.custoUnitario === 'number' ? p.custoUnitario : '';
-    const pct  = ini > 0 ? Math.round((qtd / ini) * 100) : 0;
-    const bc   = pct <= 20 ? 'bx' : pct <= 50 ? 'med' : '';
-    const imgs = Array.isArray(p.imagens) ? p.imagens : [];
-    const totalEntradas  = entradasRT.filter(e=>e.produtoId===p.id).reduce((s,e)=>s+(e.quantidade||0),0);
-    const totalEntregues = pedidosRT.filter(o=>o.status==='entregue').flatMap(o=>o.itens||[]).filter(i=>i.id===p.id).reduce((s,i)=>s+i.qty,0);
-    const fisicoBadge = p.fisico === false
-      ? `<span style="background:#ede9fe;color:#5b21b6;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px">Virtual</span>`
-      : '';
-    const ativoBtn = p.ativo !== false
-      ? `<button onclick="toggleAtivo('${p.id}',true)" style="margin-left:auto;background:var(--verde-claro);color:var(--verde-escuro);border:1px solid var(--verde);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🟢 Ativo</button>`
-      : `<button onclick="toggleAtivo('${p.id}',false)" style="margin-left:auto;background:var(--vc);color:var(--vm);border:1px solid var(--vm);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⛔ Inativo</button>`;
-    return `<div class="est-card" style="${p.ativo===false?'opacity:.6':''}">
-      <div class="est-top" style="flex-wrap:wrap;gap:6px">
-        <span class="est-em">${p.emoji||'📦'}</span>
-        <span class="est-nm">${p.nome||p.id}${fisicoBadge}</span>
-        ${ativoBtn}
-      </div>
-      <div class="est-bar-wrap" style="margin-top:8px"><div class="est-bar ${bc}" style="width:${Math.min(pct,100)}%"></div></div>
-      <div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:11px">
-        <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:center;text-align:center;gap:2px">
-          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif">${ini}</div><div style="color:var(--text-muted)">Inicial</div></div>
-          <div style="color:var(--verde);font-weight:900;font-size:13px">+</div>
-          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--verde)">${totalEntradas}</div><div style="color:var(--text-muted)">Entradas</div></div>
-          <div style="color:var(--vm);font-weight:900;font-size:13px">−</div>
-          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif;color:var(--laranja)">${totalEntregues}</div><div style="color:var(--text-muted)">Entregues</div></div>
-          <div style="font-weight:900;font-size:13px">=</div>
-          <div><div style="font-size:17px;font-weight:900;font-family:'Baloo 2',sans-serif">${qtd}</div><div style="color:var(--text-muted)">Em estoque</div></div>
-        </div>
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
-          <span style="color:var(--laranja);font-weight:700">⏳ Comprometido: ${comp}</span>
-          <span style="color:var(--verde);font-weight:700">✅ Disponível: ${disp}</span>
-        </div>
-      </div>
-      <div class="est-field-row">
-        <div class="est-field">
-          <label>Custo unit. (R$)</label>
-          <input type="number" class="est-inp" id="custo-${p.id}" value="${custo}" min="0" step="0.01" placeholder="0,00">
-        </div>
-        <div class="est-field" style="display:flex;flex-direction:column;justify-content:flex-end">
-          <button class="est-sav" id="sav-${p.id}" onclick="salvarCusto('${p.id}')">💾 Salvar custo</button>
-        </div>
-      </div>
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px">Imagens (um caminho por linha)</div>
-        <textarea class="est-inp" id="img-${p.id}" rows="3"
-          style="resize:vertical;font-family:monospace;font-size:11px;padding:6px 8px;text-align:left"
-          placeholder="imagens/${p.id}-1.jpg">${imgs.join('\n')}</textarea>
-        <button class="est-sav" id="sav-img-${p.id}" onclick="salvarImagens('${p.id}')" style="margin-top:6px">🖼️ Salvar imagens</button>
-      </div>
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Tipo & Visual</div>
-        <div class="est-field-row" style="margin-bottom:8px">
-          <div class="est-field">
-            <label>Tipo</label>
-            <select class="est-inp" id="vis-fisico-${p.id}" style="text-align:left">
-              <option value="true" ${p.fisico !== false ? 'selected' : ''}>🛍️ Físico</option>
-              <option value="false" ${p.fisico === false ? 'selected' : ''}>💛 Virtual</option>
-            </select>
-          </div>
-          <div class="est-field">
-            <label>Fundo do card</label>
-            <select class="est-inp" id="vis-cor-${p.id}" style="text-align:left">
-              <option value="" ${!p.cor?'selected':''}>— Padrão —</option>
-              <option value="cv-laranja" ${p.cor==='cv-laranja'?'selected':''}>🟠 Laranja</option>
-              <option value="cv-verde" ${p.cor==='cv-verde'?'selected':''}>🟢 Verde</option>
-              <option value="cv-amarelo" ${p.cor==='cv-amarelo'?'selected':''}>🟡 Amarelo</option>
-              <option value="cv-escuro" ${p.cor==='cv-escuro'?'selected':''}>⚫ Escuro</option>
-            </select>
-          </div>
-        </div>
-        <div class="est-field-row" style="margin-bottom:8px">
-          <div class="est-field">
-            <label>Tag (destaque)</label>
-            <input class="est-inp" id="vis-tag-${p.id}" type="text" value="${p.tag||''}" placeholder="ex: ⚽ Copa 2026" style="text-align:left">
-          </div>
-          <div class="est-field">
-            <label>Cor da tag</label>
-            <select class="est-inp" id="vis-tagCor-${p.id}" style="text-align:left">
-              <option value="tag-laranja" ${(p.tagCor||'tag-laranja')==='tag-laranja'?'selected':''}>🟠 Laranja</option>
-              <option value="tag-verde" ${p.tagCor==='tag-verde'?'selected':''}>🟢 Verde</option>
-              <option value="tag-amarelo" ${p.tagCor==='tag-amarelo'?'selected':''}>🟡 Amarelo</option>
-              <option value="tag-preto" ${p.tagCor==='tag-preto'?'selected':''}>⚫ Preto</option>
-            </select>
-          </div>
-        </div>
-        <button class="est-sav" id="sav-vis-${p.id}" onclick="salvarVisual('${p.id}')">💾 Salvar tipo & visual</button>
-      </div>
-    </div>`;
-  }).join('');
+  document.getElementById('est-tabela-content').innerHTML = `<table>
+    <thead><tr>
+      <th style="width:44px"></th>
+      <th>Produto</th>
+      <th style="text-align:center">Preço</th>
+      <th style="text-align:center">Disponível</th>
+      <th style="text-align:center">Status</th>
+      <th>Ações</th>
+    </tr></thead>
+    <tbody>${produtos.map(p => {
+      const qtd  = typeof p.quantidade === 'number' ? p.quantidade : (p.estoqueInicial||0);
+      const comp = comprometido[p.id] || 0;
+      const disp = Math.max(0, qtd - comp);
+      const ativo = p.ativo !== false;
+      return `<tr style="${!ativo?'opacity:.55':''}">
+        <td style="font-size:24px;text-align:center">${p.emoji||'📦'}</td>
+        <td>
+          <strong>${p.nome||p.id}</strong>
+          <div style="font-size:10px;color:var(--text-muted);font-family:monospace">${p.id}</div>
+        </td>
+        <td style="text-align:center;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--laranja)">R$ ${p.preco}</td>
+        <td style="text-align:center">
+          <span style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:900;color:${disp>0?'var(--verde)':'var(--vm)'}">${disp}</span>
+        </td>
+        <td style="text-align:center">
+          ${ativo ? '<span class="badge b-pg">🟢 Ativo</span>' : '<span class="badge b-ca">⛔ Inativo</span>'}
+        </td>
+        <td style="white-space:nowrap">
+          <button class="btn-a ${ativo?'btn-ca':'btn-pg'}" onclick="toggleAtivo('${p.id}',${ativo})">${ativo?'Desativar':'Ativar'}</button>
+          <button class="btn-a btn-en" onclick="abrirDetalheProduto('${p.id}')">✏️ Editar</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
 }
-
-window.salvarCusto = async function(id) {
-  const custo = parseFloat(document.getElementById('custo-'+id).value);
-  if (isNaN(custo)||custo<0) return alert('Custo inválido!');
-  const btn = document.getElementById('sav-'+id);
-  btn.disabled=true; btn.textContent='⏳ Salvando...';
-  try {
-    await setDoc(doc(db,'estoque',id), { custoUnitario: custo }, { merge:true });
-    btn.textContent='✅ Salvo!'; btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='💾 Salvar custo'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
-  } catch(err) {
-    alert('Erro: '+(err.code==='permission-denied'?'Permissão negada no Firestore.':err.message));
-    btn.disabled=false; btn.textContent='💾 Salvar custo';
-  }
-};
 
 window.toggleAtivo = async function(id, currentlyAtivo) {
   try {
     await setDoc(doc(db,'estoque',id), { ativo: !currentlyAtivo }, { merge:true });
-  } catch(err) {
-    alert('Erro: '+err.message);
-  }
-};
-
-window.salvarImagens = async function(id) {
-  const raw = document.getElementById('img-'+id)?.value||'';
-  const imagens = raw.split('\n').map(s=>s.trim()).filter(Boolean);
-  const btn = document.getElementById('sav-img-'+id);
-  btn.disabled=true; btn.textContent='⏳ Salvando...';
-  try {
-    await setDoc(doc(db,'estoque',id), { imagens }, { merge:true });
-    btn.textContent=`✅ ${imagens.length} salva(s)`; btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='🖼️ Salvar imagens'; btn.classList.remove('ok'); btn.disabled=false; }, 2000);
-  } catch(err) {
-    alert('Erro: '+err.message);
-    btn.disabled=false; btn.textContent='🖼️ Salvar imagens';
-  }
-};
-
-window.salvarVisual = async function(id) {
-  const fisico = document.getElementById('vis-fisico-'+id).value === 'true';
-  const cor    = document.getElementById('vis-cor-'+id).value;
-  const tag    = document.getElementById('vis-tag-'+id).value.trim();
-  const tagCor = document.getElementById('vis-tagCor-'+id).value;
-  const btn    = document.getElementById('sav-vis-'+id);
-  btn.disabled = true; btn.textContent = '⏳ Salvando...';
-  try {
-    await setDoc(doc(db,'estoque',id), { fisico, cor: cor||null, tag: tag||null, tagCor }, { merge:true });
-    btn.textContent = '✅ Salvo!'; btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='💾 Salvar tipo & visual'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
-  } catch(err) {
-    alert('Erro: '+err.message);
-    btn.disabled=false; btn.textContent='💾 Salvar tipo & visual';
-  }
+  } catch(err) { alert('Erro: '+err.message); }
 };
 
 // ── ENTRADAS ───────────────────────────────────────────────────
@@ -942,57 +916,157 @@ function populateEntradaSelect() {
   if (val) sel.value = val;
 }
 
-window.toggleFormNovoProduto = function() {
-  const f = document.getElementById('form-novo-produto');
-  const btn = document.getElementById('btn-toggle-np');
-  const aberto = f.style.display !== 'none';
-  f.style.display = aberto ? 'none' : 'block';
-  btn.textContent = aberto ? '+ Criar produto' : '✕ Cancelar';
+
+// ── GESTÃO DE PRODUTOS (listagem ↔ detalhe) ───────────────────
+window.abrirNovoProduto = function() {
+  produtoEmEdicao = 'novo';
+  document.getElementById('est-lista').style.display = 'none';
+  document.getElementById('est-detalhe').style.display = 'block';
+  popularFormDetalhe(null);
 };
 
-window.criarProduto = async function() {
-  const rawId  = document.getElementById('np-id').value.trim();
-  const id     = rawId.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  const nome   = document.getElementById('np-nome').value.trim();
-  const emoji  = document.getElementById('np-emoji').value.trim();
-  const preco  = parseFloat(document.getElementById('np-preco').value);
-  const qtdIni = parseInt(document.getElementById('np-estoque').value);
-  const fisico = document.getElementById('np-fisico').value === 'true';
-  const desc   = document.getElementById('np-desc').value.trim();
-  const cor    = document.getElementById('np-cor').value;
-  const tag    = document.getElementById('np-tag').value.trim();
-  const tagCor = document.getElementById('np-tagCor').value;
+window.abrirDetalheProduto = function(id) {
+  produtoEmEdicao = id;
+  document.getElementById('est-lista').style.display = 'none';
+  document.getElementById('est-detalhe').style.display = 'block';
+  popularFormDetalhe(id);
+  atualizarBreakdownDetalhe();
+};
 
-  if (!id)             return alert('ID é obrigatório!');
-  if (!nome)           return alert('Nome é obrigatório!');
-  if (isNaN(preco)||preco<0)   return alert('Preço inválido!');
-  if (isNaN(qtdIni)||qtdIni<0) return alert('Estoque inicial inválido!');
-  if (estoqueRT[id])   return alert(`Já existe um produto com o ID "${id}".`);
+window.voltarLista = function() {
+  produtoEmEdicao = null;
+  document.getElementById('est-lista').style.display = 'block';
+  document.getElementById('est-detalhe').style.display = 'none';
+  renderEstoqueLista();
+};
+
+function popularFormDetalhe(id) {
+  const isNovo = id === null;
+  const p = isNovo ? {} : (estoqueRT[id] || {});
+
+  document.getElementById('det-id-wrap').style.display  = isNovo ? 'block' : 'none';
+  document.getElementById('det-ini-wrap').style.display = isNovo ? 'block' : 'none';
+  document.getElementById('det-breakdown').style.display = isNovo ? 'none' : 'block';
+  document.getElementById('det-id').value     = '';
+  document.getElementById('det-nome').value   = p.nome   || '';
+  document.getElementById('det-emoji').value  = p.emoji  || '';
+  document.getElementById('det-preco').value  = p.preco  ?? '';
+  document.getElementById('det-desc').value   = p.desc   || '';
+  document.getElementById('det-ini').value    = p.estoqueInicial ?? '';
+  document.getElementById('det-fisico').value = p.fisico === false ? 'false' : 'true';
+  document.getElementById('det-cor').value    = p.cor    || '';
+  document.getElementById('det-tag').value    = p.tag    || '';
+  document.getElementById('det-tagCor').value = p.tagCor || 'tag-laranja';
+  document.getElementById('det-custo').value  = typeof p.custoUnitario === 'number' ? p.custoUnitario : '';
+  document.getElementById('det-imagens').value = Array.isArray(p.imagens) ? p.imagens.join('\n') : '';
+
+  const btnSalvar = document.getElementById('btn-salvar-produto');
+  btnSalvar.disabled = false;
+  btnSalvar.textContent = isNovo ? '✅ Criar produto' : '💾 Salvar alterações';
+
+  const btnAtivo = document.getElementById('det-btn-ativo');
+  const lblAtivo = document.getElementById('det-status-label');
+  if (isNovo) {
+    btnAtivo.style.display = 'none';
+    lblAtivo.textContent = '';
+  } else {
+    btnAtivo.style.display = 'inline-block';
+    _atualizarBotaoAtivo(p.ativo !== false);
+  }
+}
+
+function _atualizarBotaoAtivo(isAtivo) {
+  const btn = document.getElementById('det-btn-ativo');
+  const lbl = document.getElementById('det-status-label');
+  if (isAtivo) {
+    btn.textContent = '⛔ Desativar';
+    btn.style.cssText = 'background:var(--vc);color:var(--vm);border:1px solid var(--vm);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer';
+    lbl.textContent = 'Produto ativo';
+    lbl.style.color = 'var(--verde-escuro)';
+  } else {
+    btn.textContent = '🟢 Ativar';
+    btn.style.cssText = 'background:var(--verde-claro);color:var(--verde-escuro);border:1px solid var(--verde);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer';
+    lbl.textContent = 'Produto inativo';
+    lbl.style.color = 'var(--vm)';
+  }
+}
+
+function atualizarBreakdownDetalhe() {
+  if (!produtoEmEdicao || produtoEmEdicao === 'novo') return;
+  const p = estoqueRT[produtoEmEdicao];
+  if (!p) return;
+  const comprometido = calcComprometido();
+  const ini  = p.estoqueInicial ?? 0;
+  const qtd  = typeof p.quantidade === 'number' ? p.quantidade : ini;
+  const comp = comprometido[produtoEmEdicao] || 0;
+  const disp = Math.max(0, qtd - comp);
+  const totalEntradas  = entradasRT.filter(e=>e.produtoId===produtoEmEdicao).reduce((s,e)=>s+(e.quantidade||0),0);
+  const totalEntregues = pedidosRT.filter(o=>o.status==='entregue').flatMap(o=>o.itens||[]).filter(i=>i.id===produtoEmEdicao).reduce((s,i)=>s+i.qty,0);
+  document.getElementById('det-b-ini').textContent  = ini;
+  document.getElementById('det-b-ent').textContent  = totalEntradas;
+  document.getElementById('det-b-entr').textContent = totalEntregues;
+  document.getElementById('det-b-qtd').textContent  = qtd;
+  document.getElementById('det-b-comp').textContent = comp;
+  document.getElementById('det-b-disp').textContent = disp;
+  _atualizarBotaoAtivo(p.ativo !== false);
+}
+
+window.toggleAtivoDetalhe = async function() {
+  if (!produtoEmEdicao || produtoEmEdicao === 'novo') return;
+  const p = estoqueRT[produtoEmEdicao];
+  if (!p) return;
+  try {
+    await setDoc(doc(db,'estoque',produtoEmEdicao), { ativo: !(p.ativo !== false) }, { merge:true });
+  } catch(err) { alert('Erro: '+err.message); }
+};
+
+window.salvarProduto = async function() {
+  const isNovo = produtoEmEdicao === 'novo';
+  const nome   = document.getElementById('det-nome').value.trim();
+  const emoji  = document.getElementById('det-emoji').value.trim();
+  const preco  = parseFloat(document.getElementById('det-preco').value);
+  const desc   = document.getElementById('det-desc').value.trim();
+  const fisico = document.getElementById('det-fisico').value === 'true';
+  const cor    = document.getElementById('det-cor').value;
+  const tag    = document.getElementById('det-tag').value.trim();
+  const tagCor = document.getElementById('det-tagCor').value;
+  const custo  = parseFloat(document.getElementById('det-custo').value);
+  const imgs   = document.getElementById('det-imagens').value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  if (!nome) return alert('Nome é obrigatório!');
+  if (isNaN(preco)||preco<0) return alert('Preço inválido!');
+
+  const btn = document.getElementById('btn-salvar-produto');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
   try {
-    await setDoc(doc(db,'estoque',id), {
-      nome, emoji, preco,
-      quantidade:     qtdIni,
-      estoqueInicial: qtdIni,
-      fisico,
-      desc:   desc   || null,
-      cor:    cor    || null,
-      tag:    tag    || null,
-      tagCor: tagCor || null,
-      imagens: [],
-      criadoEm: serverTimestamp(),
-    });
-    ['np-id','np-nome','np-emoji','np-preco','np-estoque','np-desc','np-tag'].forEach(f=>{
-      document.getElementById(f).value='';
-    });
-    document.getElementById('np-fisico').value  = 'true';
-    document.getElementById('np-cor').value     = '';
-    document.getElementById('np-tagCor').value  = 'tag-laranja';
-    document.getElementById('form-novo-produto').style.display = 'none';
-    document.getElementById('btn-toggle-np').textContent = '+ Criar produto';
-    alert(`✅ Produto "${nome}" criado!`);
+    if (isNovo) {
+      const rawId = document.getElementById('det-id').value.trim();
+      const id = rawId.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+      if (!id) { btn.disabled=false; btn.textContent='✅ Criar produto'; return alert('ID é obrigatório!'); }
+      if (estoqueRT[id]) { btn.disabled=false; btn.textContent='✅ Criar produto'; return alert(`Já existe um produto com o ID "${id}".`); }
+      const qtdIni = parseInt(document.getElementById('det-ini').value);
+      if (isNaN(qtdIni)||qtdIni<0) { btn.disabled=false; btn.textContent='✅ Criar produto'; return alert('Estoque inicial inválido!'); }
+      await setDoc(doc(db,'estoque',id), {
+        nome, emoji, preco,
+        quantidade: qtdIni, estoqueInicial: qtdIni,
+        fisico, cor: cor||null, tag: tag||null, tagCor: tagCor||null,
+        desc: desc||null, imagens: imgs,
+        custoUnitario: !isNaN(custo)&&custo>=0 ? custo : null,
+        ativo: true,
+        criadoEm: serverTimestamp(),
+      });
+      voltarLista();
+    } else {
+      const payload = { nome, emoji, preco, fisico, cor: cor||null, tag: tag||null, tagCor: tagCor||null, desc: desc||null, imagens: imgs };
+      if (!isNaN(custo)&&custo>=0) payload.custoUnitario = custo;
+      await setDoc(doc(db,'estoque',produtoEmEdicao), payload, { merge:true });
+      btn.disabled = false; btn.textContent = '✅ Salvo!';
+      setTimeout(()=>{ btn.textContent='💾 Salvar alterações'; }, 1800);
+    }
   } catch(err) {
-    alert('Erro ao criar produto: '+err.message);
+    alert('Erro: '+err.message);
+    btn.disabled=false; btn.textContent = isNovo ? '✅ Criar produto' : '💾 Salvar alterações';
   }
 };
 
