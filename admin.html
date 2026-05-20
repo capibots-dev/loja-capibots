@@ -253,13 +253,38 @@ tr:hover td{background:#fafafa;}
             <div class="fg-e"><label>Preço (R$)</label><input type="number" id="np-preco" min="0" step="0.01" placeholder="10"></div>
             <div class="fg-e"><label>Estoque inicial</label><input type="number" id="np-estoque" min="0" placeholder="30"></div>
           </div>
-          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px">
             <div class="fg-e"><label>Descrição (opcional)</label><input type="text" id="np-desc" placeholder="Descrição curta do produto..."></div>
             <div class="fg-e">
               <label>Tipo</label>
               <select id="np-fisico" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
                 <option value="true">🛍️ Produto físico</option>
                 <option value="false">💛 Virtual (vaquinha/doação)</option>
+              </select>
+            </div>
+            <div class="fg-e">
+              <label>Fundo do card</label>
+              <select id="np-cor" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
+                <option value="">— Padrão —</option>
+                <option value="cv-laranja">🟠 Laranja</option>
+                <option value="cv-verde">🟢 Verde</option>
+                <option value="cv-amarelo">🟡 Amarelo</option>
+                <option value="cv-escuro">⚫ Escuro</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
+            <div class="fg-e">
+              <label>Tag (destaque)</label>
+              <input type="text" id="np-tag" placeholder="ex: ⚽ Copa 2026" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;transition:border-color .15s;width:100%">
+            </div>
+            <div class="fg-e">
+              <label>Cor da tag</label>
+              <select id="np-tagCor" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:#fff;transition:border-color .15s">
+                <option value="tag-laranja">🟠 Laranja</option>
+                <option value="tag-verde">🟢 Verde</option>
+                <option value="tag-amarelo">🟡 Amarelo</option>
+                <option value="tag-preto">⚫ Preto</option>
               </select>
             </div>
             <button class="btn-add-entrada" onclick="criarProduto()">✅ Criar produto</button>
@@ -645,6 +670,44 @@ function renderEstoque() {
           placeholder="imagens/${p.id}-1.jpg">${imgs.join('\n')}</textarea>
         <button class="est-sav" id="sav-img-${p.id}" onclick="salvarImagens('${p.id}')" style="margin-top:6px">🖼️ Salvar imagens</button>
       </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Tipo & Visual</div>
+        <div class="est-field-row" style="margin-bottom:8px">
+          <div class="est-field">
+            <label>Tipo</label>
+            <select class="est-inp" id="vis-fisico-${p.id}" style="text-align:left">
+              <option value="true" ${p.fisico !== false ? 'selected' : ''}>🛍️ Físico</option>
+              <option value="false" ${p.fisico === false ? 'selected' : ''}>💛 Virtual</option>
+            </select>
+          </div>
+          <div class="est-field">
+            <label>Fundo do card</label>
+            <select class="est-inp" id="vis-cor-${p.id}" style="text-align:left">
+              <option value="" ${!p.cor?'selected':''}>— Padrão —</option>
+              <option value="cv-laranja" ${p.cor==='cv-laranja'?'selected':''}>🟠 Laranja</option>
+              <option value="cv-verde" ${p.cor==='cv-verde'?'selected':''}>🟢 Verde</option>
+              <option value="cv-amarelo" ${p.cor==='cv-amarelo'?'selected':''}>🟡 Amarelo</option>
+              <option value="cv-escuro" ${p.cor==='cv-escuro'?'selected':''}>⚫ Escuro</option>
+            </select>
+          </div>
+        </div>
+        <div class="est-field-row" style="margin-bottom:8px">
+          <div class="est-field">
+            <label>Tag (destaque)</label>
+            <input class="est-inp" id="vis-tag-${p.id}" type="text" value="${p.tag||''}" placeholder="ex: ⚽ Copa 2026" style="text-align:left">
+          </div>
+          <div class="est-field">
+            <label>Cor da tag</label>
+            <select class="est-inp" id="vis-tagCor-${p.id}" style="text-align:left">
+              <option value="tag-laranja" ${(p.tagCor||'tag-laranja')==='tag-laranja'?'selected':''}>🟠 Laranja</option>
+              <option value="tag-verde" ${p.tagCor==='tag-verde'?'selected':''}>🟢 Verde</option>
+              <option value="tag-amarelo" ${p.tagCor==='tag-amarelo'?'selected':''}>🟡 Amarelo</option>
+              <option value="tag-preto" ${p.tagCor==='tag-preto'?'selected':''}>⚫ Preto</option>
+            </select>
+          </div>
+        </div>
+        <button class="est-sav" id="sav-vis-${p.id}" onclick="salvarVisual('${p.id}')">💾 Salvar tipo & visual</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -679,6 +742,23 @@ window.salvarImagens = async function(id) {
   } catch(err) {
     alert('Erro: '+err.message);
     btn.disabled=false; btn.textContent='🖼️ Salvar imagens';
+  }
+};
+
+window.salvarVisual = async function(id) {
+  const fisico = document.getElementById('vis-fisico-'+id).value === 'true';
+  const cor    = document.getElementById('vis-cor-'+id).value;
+  const tag    = document.getElementById('vis-tag-'+id).value.trim();
+  const tagCor = document.getElementById('vis-tagCor-'+id).value;
+  const btn    = document.getElementById('sav-vis-'+id);
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    await setDoc(doc(db,'estoque',id), { fisico, cor: cor||null, tag: tag||null, tagCor }, { merge:true });
+    btn.textContent = '✅ Salvo!'; btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent='💾 Salvar tipo & visual'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
+  } catch(err) {
+    alert('Erro: '+err.message);
+    btn.disabled=false; btn.textContent='💾 Salvar tipo & visual';
   }
 };
 
@@ -867,6 +947,9 @@ window.criarProduto = async function() {
   const qtdIni = parseInt(document.getElementById('np-estoque').value);
   const fisico = document.getElementById('np-fisico').value === 'true';
   const desc   = document.getElementById('np-desc').value.trim();
+  const cor    = document.getElementById('np-cor').value;
+  const tag    = document.getElementById('np-tag').value.trim();
+  const tagCor = document.getElementById('np-tagCor').value;
 
   if (!id)             return alert('ID é obrigatório!');
   if (!nome)           return alert('Nome é obrigatório!');
@@ -880,14 +963,19 @@ window.criarProduto = async function() {
       quantidade:     qtdIni,
       estoqueInicial: qtdIni,
       fisico,
-      desc:    desc || null,
+      desc:   desc   || null,
+      cor:    cor    || null,
+      tag:    tag    || null,
+      tagCor: tagCor || null,
       imagens: [],
       criadoEm: serverTimestamp(),
     });
-    ['np-id','np-nome','np-emoji','np-preco','np-estoque','np-desc'].forEach(f=>{
+    ['np-id','np-nome','np-emoji','np-preco','np-estoque','np-desc','np-tag'].forEach(f=>{
       document.getElementById(f).value='';
     });
-    document.getElementById('np-fisico').value = 'true';
+    document.getElementById('np-fisico').value  = 'true';
+    document.getElementById('np-cor').value     = '';
+    document.getElementById('np-tagCor').value  = 'tag-laranja';
     document.getElementById('form-novo-produto').style.display = 'none';
     document.getElementById('btn-toggle-np').textContent = '+ Criar produto';
     alert(`✅ Produto "${nome}" criado!`);
