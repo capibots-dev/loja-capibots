@@ -716,7 +716,7 @@ window.adicionarCotasCarrinho = function() {
   if (carrinho['vaquinha']) carrinho['vaquinha'].qty += n;
   else carrinho['vaquinha'] = {
     id: 'vaquinha', nome: 'Cota — Vaquinha Tapete', emoji: '🐄',
-    preco: 1, qty: n,
+    preco: 1, qty: n, fisico: false,
   };
   fecharModalVaquinha();
   renderCarrinho();

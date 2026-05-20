@@ -321,10 +321,10 @@ import { getFirestore, collection, doc, getDoc, onSnapshot,
 import { firebaseConfig } from "./firebase-config.js";
 
 const PRODUTOS_DEF = [
-  { id:'chaveiro',  nome:'Chaveiro Capivara Brasil',  emoji:'🔑', preco:10, estoqueInicial:30 },
-  { id:'pin-crocs', nome:'Pin Capivara p/ Crocs',     emoji:'🩴', preco:10, estoqueInicial:25 },
-  { id:'pulseira',  nome:'Pulseira Capivara Copa',    emoji:'📿', preco:10, estoqueInicial:40 },
-  { id:'lapis',     nome:'Lápis & Lapiseira Capivara',emoji:'✏️', preco:10, estoqueInicial:50 },
+  { id:'chaveiro',  nome:'Chaveiro Capivara Brasil',  emoji:'🔑', preco:10, estoqueInicial:30, fisico:true },
+  { id:'pin-crocs', nome:'Pin Capivara p/ Crocs',     emoji:'🩴', preco:10, estoqueInicial:25, fisico:true },
+  { id:'pulseira',  nome:'Pulseira Capivara Copa',    emoji:'📿', preco:10, estoqueInicial:40, fisico:true },
+  { id:'lapis',     nome:'Lápis & Lapiseira Capivara',emoji:'✏️', preco:10, estoqueInicial:50, fisico:true },
 ];
 
 const app = initializeApp(firebaseConfig);
@@ -472,10 +472,10 @@ function renderPedidos() {
       let ac = '';
       if (p.status==='novo') {
         ac = `<button class="btn-a btn-pg" onclick="mudarStatus('${p._docId}','pagamento_confirmado')">✅ Confirmar PIX</button>
-              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome}')">❌</button>`;
+              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
       } else if (p.status==='pagamento_confirmado') {
         ac = `<button class="btn-a btn-en" onclick="abrirModalEntrega('${p._docId}')">📦 Entregar</button>
-              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome}')">❌</button>`;
+              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
       }
       const entregaInfo = p.entregue_por
         ? `<div style="font-size:10px;color:var(--verde-escuro)">
@@ -486,7 +486,7 @@ function renderPedidos() {
         : '<span style="color:#ccc">—</span>';
       return `<tr>
         <td><span style="font-family:monospace;font-size:10px">${p.id||p._docId}</span></td>
-        <td><strong>${p.nome}</strong><br><span style="color:var(--text-muted);font-size:10px">${p.turma} · ${p.whatsapp}</span></td>
+        <td><strong>${p.nome||'Anônimo'}</strong><br><span style="color:var(--text-muted);font-size:10px">${[p.turma,p.whatsapp].filter(Boolean).join(' · ')||'—'}</span></td>
         <td>${eis}</td>
         <td><strong>${fmt(p.total)}</strong></td>
         <td>${bm[p.status]||p.status}</td>
@@ -525,8 +525,9 @@ window.abrirModalEntrega = function(docId) {
   if (!p) return;
   pedidoParaEntregar = p;
   const eis = (p.itens||[]).map(i=>`${i.emoji} ${i.qty}× ${i.nome}`).join('<br>');
+  const clienteInfo = [p.nome, p.turma, p.whatsapp].filter(Boolean).join(' · ') || 'Anônimo';
   document.getElementById('modal-entrega-info').innerHTML =
-    `<strong>${p.nome}</strong> · ${p.turma} · ${p.whatsapp}<br>${eis}<br><strong>Total: ${fmt(p.total)}</strong>`;
+    `<strong>${clienteInfo}</strong><br>${eis}<br><strong>Total: ${fmt(p.total)}</strong>`;
   document.getElementById('modal-entregador').textContent =
     `👤 Entregue por: ${usuarioLogado?.nome || usuarioLogado?.username || 'Admin'}`;
   document.getElementById('modal-obs').value = '';
@@ -630,6 +631,8 @@ window.salvarEstoque = async function(id) {
   try {
     const payload = { quantidade: val };
     if (!isNaN(custo)&&custo>=0) payload.custoUnitario = custo;
+    const def = PRODUTOS_DEF.find(p => p.id === id);
+    if (def) payload.fisico = def.fisico;
     await setDoc(doc(db,'estoque',id), payload, { merge:true });
     btn.textContent='✅ Salvo!'; btn.classList.add('ok');
     setTimeout(()=>{ btn.textContent='💾 Salvar'; btn.classList.remove('ok'); btn.disabled=false; }, 1800);
