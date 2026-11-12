@@ -520,9 +520,9 @@ footer .verde{color:#6ee88a;}
   <div class="vaquinha-banner" id="vaquinha-banner" style="display:none">
     <div class="vaquinha-emoji-wrap"><img src="capy-vaca.png" alt="Capivara Vaquinha" style="width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3))"></div>
     <div class="vaquinha-info">
-      <div class="vaquinha-titulo">🎯 Vaquinha: Tapete de Competição</div>
-      <div class="vaquinha-sub">Ajude a equipe a adquirir o tapete oficial para as competições.<br>
-        <strong>1.500 cotas de R$ 1,00</strong> — cada contribuição faz diferença!</div>
+      <div class="vaquinha-titulo">🚌 Vaquinha: Capibots na Final Nacional</div>
+      <div class="vaquinha-sub">Ajude 9 crianças a defender o Colégio Batista Mineiro na Final Nacional, em Curitiba. Os R$ 28.000 cobrem ônibus, hospedagem e inscrição.<br>
+        <strong>28.000 cotas de R$ 1,00</strong> — cada contribuição faz diferença!</div>
       <div class="vaquinha-vals">
         <div class="vval">
           <div class="vval-num amarelo" id="vq-arrecadado">R$ 0</div>
@@ -530,12 +530,12 @@ footer .verde{color:#6ee88a;}
         </div>
         <div class="vval-sep"></div>
         <div class="vval">
-          <div class="vval-num" id="vq-meta">R$ 1.500</div>
+          <div class="vval-num" id="vq-meta">R$ 28.000</div>
           <div class="vval-lbl">Meta</div>
         </div>
         <div class="vval-sep"></div>
         <div class="vval">
-          <div class="vval-num" id="vq-cotas-rest">1.500</div>
+          <div class="vval-num" id="vq-cotas-rest">28.000</div>
           <div class="vval-lbl">Cotas restantes</div>
         </div>
       </div>
@@ -544,7 +544,7 @@ footer .verde{color:#6ee88a;}
           <div class="prog-bar" id="vq-bar" style="width:0%"></div>
         </div>
         <div class="prog-nums">
-          <span class="prog-cotas" id="vq-cotas-txt">0 de 1.500 cotas</span>
+          <span class="prog-cotas" id="vq-cotas-txt">0 de 28.000 cotas</span>
           <span class="prog-pct" id="vq-pct">0%</span>
         </div>
       </div>
@@ -601,7 +601,7 @@ footer .verde{color:#6ee88a;}
     <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin:1.25rem 0;">
       <button onclick="document.getElementById('input-cotas').value=Math.max(1,(parseInt(document.getElementById('input-cotas').value)||1)-1);atualizarTotalCotas()"
         style="background:var(--verde-claro);border:2px solid var(--verde);border-radius:50%;width:40px;height:40px;font-size:22px;font-weight:700;color:var(--verde-escuro);cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
-      <input type="number" id="input-cotas" value="1" min="1" max="1500"
+      <input type="number" id="input-cotas" value="1" min="1" max="28000"
         oninput="atualizarTotalCotas()"
         style="width:90px;text-align:center;border:2px solid var(--verde);border-radius:12px;padding:10px;font-family:'Baloo 2',sans-serif;font-size:28px;font-weight:900;outline:none;color:var(--preto);">
       <button onclick="document.getElementById('input-cotas').value=(parseInt(document.getElementById('input-cotas').value)||0)+1;atualizarTotalCotas()"
@@ -642,7 +642,7 @@ const VISUAL = {
   'lapis':     { cor:'cv-escuro',  tag:'📚 ODS 4',     tagCor:'tag-preto'   },
 };
 
-const VAQUINHA_META = 1500; // cotas totais
+const VAQUINHA_META = 28000; // cotas totais
 
 let produtosRT = {};
 let carrinho   = {};
@@ -718,7 +718,7 @@ window.adicionarCotasCarrinho = function() {
   }
   if (carrinho['vaquinha']) carrinho['vaquinha'].qty += n;
   else carrinho['vaquinha'] = {
-    id: 'vaquinha', nome: 'Cota — Vaquinha Tapete', emoji: '🐄',
+    id: 'vaquinha', nome: 'Cota — Vaquinha Final Nacional', emoji: '🐄',
     preco: 1, qty: n, fisico: false,
   };
   sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
@@ -749,12 +749,12 @@ function renderProdutos() {
       <div class="cv-header">
         <img src="capy-vaca.png" alt="Capivara Vaquinha" style="width:54px;height:54px;object-fit:contain">
         <div class="cv-header-info">
-          <div class="cv-header-nome">Vaquinha: Tapete de Competição</div>
+          <div class="cv-header-nome">Vaquinha: Final Nacional em Curitiba</div>
           <span class="cv-header-tag">💛 Campanha</span>
         </div>
       </div>
       <div class="cv-body">
-        <div class="cv-desc">Contribua com cotas de R$ 1 para a equipe adquirir o tapete oficial das competições!</div>
+        <div class="cv-desc">Contribua com cotas de R$ 1 para levar a equipe e as famílias à Final Nacional, em Curitiba.</div>
         <div>
           <div class="cv-prog-track"><div class="cv-prog-bar" style="width:${vqPct}%"></div></div>
           <div class="cv-prog-label"><span>${vqVendidas} cotas vendidas</span><span>${vqPct}% da meta</span></div>
