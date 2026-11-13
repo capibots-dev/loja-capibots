@@ -78,7 +78,8 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;
   border:2px solid #e0d060;overflow:hidden;
 }
-.pix-qr img{width:100%;height:100%;object-fit:contain;}
+.pix-qr img,.pix-qr canvas{width:100%;height:100%;object-fit:contain;}
+#qr-box{width:100%;height:100%;}
 .qr-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-muted);font-size:12px;}
 .pix-chave-label{font-size:12px;color:var(--text-muted);margin-bottom:5px;}
 .pix-chave{
@@ -197,8 +198,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
             <div style="width:28px;height:28px;border:3px solid #e0d060;border-top-color:#a07800;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:6px"></div>
             <span style="font-size:12px;color:#a07800">Gerando QR Code...</span>
           </div>
-          <canvas id="qr-canvas" style="display:none;width:100%;height:100%;border-radius:8px"></canvas>
-        </div>
+                  </div>
         <div class="pix-chave-label">Chave PIX da equipe Capibots:</div>
         <div class="pix-chave" id="pix-chave-txt" onclick="copiarChave()">carregando...</div>
         <div class="pix-valor" id="pix-valor-txt">R$ 0</div>
@@ -356,15 +356,15 @@ function crc16(str) {
 function gerarQRCode(chave, tipo, valor) {
   try {
     const payload = pixPayload(chave, tipo, valor, 'Capibots', 'Uberlandia');
-    const canvas  = document.getElementById('qr-canvas');
     const wrap    = document.getElementById('pix-qr-wrap');
 
-    // QRCode.js renderiza num div temporário, depois copiamos para canvas
-    const tmp = document.createElement('div');
-    tmp.style.display = 'none';
-    document.body.appendChild(tmp);
+    // Renderiza direto num container visível. Num div display:none o QRCode.js
+    // deixa o <img> sem src em alguns celulares (imagem quebrada).
+    const box = document.createElement('div');
+    box.id = 'qr-box';
+    wrap.appendChild(box);
 
-    new QRCode(tmp, {
+    new QRCode(box, {
       text:          payload,
       width:         200,
       height:        200,
@@ -373,22 +373,23 @@ function gerarQRCode(chave, tipo, valor) {
       correctLevel:  QRCode.CorrectLevel.M,
     });
 
-    // QRCode.js cria um <img> dentro do div
-    setTimeout(() => {
-      const img = tmp.querySelector('img');
-      if (img) {
-        // Substitui o loading pelo img
-        document.getElementById('qr-loading').style.display = 'none';
-        const qrImg = document.createElement('img');
-        qrImg.src    = img.src;
-        qrImg.alt    = 'QR Code PIX';
-        qrImg.style  = 'width:100%;height:100%;object-fit:contain;border-radius:8px';
-        wrap.appendChild(qrImg);
-      } else {
-        mostrarErroQR();
-      }
-      document.body.removeChild(tmp);
-    }, 100);
+    // Usa o canvas (sempre desenhado) e descarta o <img> que o QRCode.js cria
+    const cv = box.querySelector('canvas');
+    if (cv) {
+      const dataUrl = cv.toDataURL('image/png');
+      box.innerHTML = '';
+      const qrImg = new Image();
+      qrImg.alt = 'QR Code PIX';
+      qrImg.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:8px';
+      qrImg.onerror = mostrarErroQR;
+      qrImg.src = dataUrl;
+      box.appendChild(qrImg);
+      document.getElementById('qr-loading').style.display = 'none';
+    } else if (box.querySelector('img')) {
+      document.getElementById('qr-loading').style.display = 'none';
+    } else {
+      mostrarErroQR();
+    }
   } catch(e) {
     console.error('Erro ao gerar QR Code:', e);
     mostrarErroQR();
