@@ -616,7 +616,7 @@ footer .verde{color:#6ee88a;}
         style="background:#f3f4f6;color:var(--text-muted);border:none;border-radius:50px;padding:12px 20px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
         Cancelar
       </button>
-      <button onclick="adicionarCotasCarrinho()"
+      <button id="btn-modal-cotas" onclick="adicionarCotasCarrinho()"
         style="flex:1;background:var(--amarelo);color:var(--preto);border:none;border-radius:50px;padding:12px;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 4px 14px rgba(255,214,0,0.4);">
         💛 Adicionar ao Carrinho
       </button>
@@ -696,6 +696,9 @@ function renderVaquinha() {
 window.apoiarVaquinha = function() {
   const mv=document.getElementById('modal-vaquinha');mv.style.display='flex';mv.classList.add('open');
   document.getElementById('input-cotas').value = 1;
+  // carrinho vazio: o botão leva direto ao pagamento da vaquinha
+  document.getElementById('btn-modal-cotas').textContent =
+    Object.keys(carrinho).length === 0 ? '💛 Ir para o pagamento' : '💛 Adicionar ao Carrinho';
   atualizarTotalCotas();
 };
 
@@ -711,6 +714,7 @@ window.fecharModalVaquinha = function() {
 window.adicionarCotasCarrinho = function() {
   const n = parseInt(document.getElementById('input-cotas').value) || 0;
   if (n < 1) return alert('Escolha pelo menos 1 cota!');
+  const irDireto = Object.keys(carrinho).length === 0;
   const restantes = vaquinhaRT ? (vaquinhaRT.quantidade ?? VAQUINHA_META) : VAQUINHA_META;
   const jaNoCarrinho = carrinho['vaquinha']?.qty || 0;
   if (n + jaNoCarrinho > restantes) {
@@ -722,6 +726,7 @@ window.adicionarCotasCarrinho = function() {
     preco: 1, qty: n, fisico: false,
   };
   sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho));
+  if (irDireto) { window.location.href = 'checkout.html'; return; }
   fecharModalVaquinha();
   renderCarrinho();
   renderProdutos();

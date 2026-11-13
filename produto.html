@@ -376,9 +376,12 @@ window.mudaQty = function(delta) {
 window.addAoCarrinho = function() {
   if (!produtoAtual) return;
   const p = produtoAtual;
+  // item não físico (vaquinha) com carrinho vazio: vai direto ao pagamento
+  const irDireto = p.fisico === false && Object.keys(carrinho).length === 0;
   if (carrinho[p.id]) carrinho[p.id].qty += qtySelecionada;
-  else carrinho[p.id] = { id:p.id, nome:p.nome, emoji:p.emoji||'🛍️', preco:p.preco, qty:qtySelecionada };
+  else carrinho[p.id] = { id:p.id, nome:p.nome, emoji:p.emoji||'🛍️', preco:p.preco, qty:qtySelecionada, fisico:p.fisico };
   salvarCarrinho();
+  if (irDireto) { window.location.href = 'checkout.html'; return; }
   atualizarContadorCarrinho();
   atualizarBotao();
   showToast(`✅ ${qtySelecionada}× ${p.nome} adicionado!`);
@@ -396,7 +399,8 @@ function atualizarBotao() {
   const disp = qt - jac;
   const btn  = document.getElementById('btn-add');
   btn.disabled = disp <= 0;
-  btn.textContent = disp > 0 ? `🛒 Adicionar ao Carrinho` : 'Esgotado';
+  const direto = p?.fisico === false && Object.keys(carrinho).length === 0;
+  btn.textContent = disp > 0 ? (direto ? '💛 Ir para o pagamento' : `🛒 Adicionar ao Carrinho`) : 'Esgotado';
   document.getElementById('qty-mais').disabled  = qtySelecionada >= disp;
   document.getElementById('qty-menos').disabled = qtySelecionada <= 1;
 
