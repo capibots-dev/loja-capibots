@@ -222,8 +222,8 @@ tr:hover td{background:#fafafa;}
       <div class="filtros">
         <button class="fb ativo" onclick="filtrar('todos',this)">Todos</button>
         <button class="fb" onclick="filtrar('novo',this)">🆕 Novo</button>
-        <button class="fb" onclick="filtrar('pagamento_confirmado',this)">✅ PIX Confirmado</button>
-        <button class="fb" onclick="filtrar('entregue',this)">📦 Entregue</button>
+        <button class="fb" id="fb-pg" onclick="filtrar('pagamento_confirmado',this)">✅ PIX Confirmado</button>
+        <button class="fb" id="fb-en" onclick="filtrar('entregue',this)">📦 Entregue</button>
         <button class="fb" onclick="filtrar('cancelado',this)">❌ Cancelado</button>
       </div>
       <div class="tabela-wrap">
@@ -552,8 +552,20 @@ function calcComprometido() {
   return comp;
 }
 
+// Pedido só de cotas da vaquinha: não tem entrega, o PIX confirmado já conclui
+function isVirtual(p) {
+  const it = p.itens || [];
+  return it.length > 0 && it.every(i => i.id === 'vaquinha');
+}
+
 // ── PEDIDOS ────────────────────────────────────────────────────
 function renderPedidos() {
+  // Sem nenhum pedido físico, esconde toda a parte de entrega
+  const soVirtual = pedidosRT.every(isVirtual);
+  const temPgPendente = pedidosRT.some(p => p.status==='pagamento_confirmado');
+  document.getElementById('fb-pg').style.display = soVirtual && !temPgPendente ? 'none' : '';
+  document.getElementById('fb-en').textContent   = soVirtual ? '💛 Recebido' : '📦 Entregue';
+
   const total = pedidosRT.length;
   const novo  = pedidosRT.filter(p => p.status==='novo').length;
   const pg    = pedidosRT.filter(p => p.status==='pagamento_confirmado').length;
@@ -564,15 +576,16 @@ function renderPedidos() {
   document.getElementById('met-pedidos').innerHTML = `
     <div class="mc"><div class="mc-label">Total</div><div class="mc-val">${total}</div></div>
     <div class="mc"><div class="mc-label">🆕 Novos</div><div class="mc-val laranja">${novo}</div></div>
-    <div class="mc"><div class="mc-label">✅ PIX Confirmado</div><div class="mc-val verde">${pg}</div></div>
-    <div class="mc"><div class="mc-label">📦 Entregues</div><div class="mc-val">${en}</div></div>
+    ${soVirtual && !pg ? '' : `<div class="mc"><div class="mc-label">✅ PIX Confirmado</div><div class="mc-val verde">${pg}</div></div>`}
+    <div class="mc"><div class="mc-label">${soVirtual ? '💛 Recebidos' : '📦 Entregues'}</div><div class="mc-val">${en}</div></div>
     <div class="mc"><div class="mc-label">❌ Cancelados</div><div class="mc-val vermelho">${ca}</div></div>
-    <div class="mc"><div class="mc-label">💰 Receita</div><div class="mc-val amarelo">${fmt(rec)}</div></div>`;
+    <div class="mc"><div class="mc-label">${soVirtual ? '💰 Arrecadado' : '💰 Receita'}</div><div class="mc-val amarelo">${fmt(rec)}</div></div>`;
 
   const bm = {
     novo:                 '<span class="badge b-novo">🆕 Novo</span>',
     pagamento_confirmado: '<span class="badge b-pg">✅ PIX Confirmado</span>',
     entregue:             '<span class="badge b-en">📦 Entregue</span>',
+    recebido:             '<span class="badge b-en">💛 Recebido</span>',
     cancelado:            '<span class="badge b-ca">❌ Cancelado</span>',
   };
 
@@ -587,12 +600,16 @@ function renderPedidos() {
   document.getElementById('tab-pedidos').innerHTML = `<table>
     <thead><tr>
       <th>ID</th><th>Cliente</th><th>Itens</th><th>Total</th>
-      <th>Status</th><th>Data</th><th>Entrega</th><th>Ações</th>
+      <th>Status</th><th>Data</th>${soVirtual ? '' : '<th>Entrega</th>'}<th>Ações</th>
     </tr></thead>
     <tbody>${ord.map(p => {
       const eis = (p.itens||[]).map(i=>`${i.emoji} ${i.qty}×`).join(' ');
+      const virt = isVirtual(p);
       let ac = '';
-      if (p.status==='novo') {
+      if (virt && (p.status==='novo' || p.status==='pagamento_confirmado')) {
+        ac = `<button class="btn-a btn-pg" onclick="confirmarContribuicao('${p._docId}')">✅ Confirmar PIX</button>
+              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
+      } else if (p.status==='novo') {
         ac = `<button class="btn-a btn-pg" onclick="mudarStatus('${p._docId}','pagamento_confirmado')">✅ Confirmar PIX</button>
               <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
       } else if (p.status==='pagamento_confirmado') {
@@ -611,9 +628,9 @@ function renderPedidos() {
         <td><strong>${p.nome||'Anônimo'}</strong><br><span style="color:var(--text-muted);font-size:10px">${[p.turma,p.whatsapp].filter(Boolean).join(' · ')||'—'}</span></td>
         <td>${eis}</td>
         <td><strong>${fmt(p.total)}</strong></td>
-        <td>${bm[p.status]||p.status}</td>
+        <td>${bm[virt && p.status==='entregue' ? 'recebido' : p.status]||p.status}</td>
         <td style="font-size:10px;white-space:nowrap">${fmtData(p.criadoEm)}</td>
-        <td>${entregaInfo}</td>
+        ${soVirtual ? '' : `<td>${virt ? '<span style="color:#ccc">—</span>' : entregaInfo}</td>`}
         <td style="white-space:nowrap">${ac}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -656,6 +673,25 @@ window.abrirModalEntrega = function(docId) {
   const btn = document.getElementById('btn-confirmar-entrega');
   btn.disabled = false; btn.textContent = '✅ Confirmar Entrega';
   document.getElementById('modal-entrega').classList.add('open');
+};
+
+// Cota da vaquinha: confirmar o PIX já conclui (abate a cota do estoque, que move a barra de progresso)
+window.confirmarContribuicao = async function(docId) {
+  const p = pedidosRT.find(p => p._docId === docId);
+  if (!p) return;
+  try {
+    for (const item of p.itens || []) {
+      await updateDoc(doc(db, 'estoque', item.id), { quantidade: increment(-item.qty) });
+    }
+    await updateDoc(doc(db, 'pedidos', docId), {
+      status:       'entregue',
+      entregue_por: usuarioLogado?.nome || usuarioLogado?.username || 'Admin',
+      entregue_em:  serverTimestamp(),
+    });
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao confirmar contribuição: ' + err.message);
+  }
 };
 
 window.fecharModalEntrega = function() {

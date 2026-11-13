@@ -157,13 +157,13 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
 <div class="page">
   <div class="steps">
     <div class="step done"><span class="step-n">✓</span>Produtos</div>
-    <div class="step active"><span class="step-n">2</span>Seus Dados</div>
-    <div class="step"><span class="step-n">3</span>PIX</div>
-    <div class="step"><span class="step-n">4</span>Confirmado</div>
+    <div class="step active" id="step-dados"><span class="step-n">2</span>Seus Dados</div>
+    <div class="step" id="step-pix"><span class="step-n">3</span>PIX</div>
+    <div class="step" id="step-ok"><span class="step-n">4</span>Confirmado</div>
   </div>
 
   <div id="form-section">
-    <h1>📋 Finalizar Pedido</h1>
+    <h1 id="titulo">📋 Finalizar Pedido</h1>
 
     <div class="card">
       <div class="card-tit">🛒 Resumo</div>
@@ -179,15 +179,15 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
       <div id="aviso-virtual" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:10px 14px;font-size:13px;color:#856404;margin-bottom:.9rem">
         💛 Contribuição via vaquinha — dados de contato são opcionais, mas ajudam a equipe a te agradecer!
       </div>
-      <div class="form-row">
+      <div class="form-row" id="row-nome">
         <div class="fg"><label id="label-nome">Nome completo *</label><input type="text" id="nome" placeholder="Seu nome completo" required></div>
-        <div class="fg"><label>Turma / Série</label><input type="text" id="turma" placeholder="Ex: 3º A"></div>
+        <div class="fg" id="fg-turma"><label>Turma / Série</label><input type="text" id="turma" placeholder="Ex: 3º A"></div>
       </div>
-      <div class="form-row">
+      <div class="form-row" id="row-contato">
         <div class="fg"><label id="label-whatsapp">WhatsApp *</label><input type="tel" id="whatsapp" placeholder="(34) 9xxxx-xxxx" required></div>
-        <div class="fg"><label>E-mail (opcional)</label><input type="email" id="email" placeholder="seu@email.com"></div>
+        <div class="fg" id="fg-email"><label>E-mail (opcional)</label><input type="email" id="email" placeholder="seu@email.com"></div>
       </div>
-      <div class="fg"><label>Observações</label><textarea id="obs" placeholder="Alguma observação?"></textarea></div>
+      <div class="fg" id="fg-obs"><label>Observações</label><textarea id="obs" placeholder="Alguma observação?"></textarea></div>
     </div>
 
     <div class="card">
@@ -205,22 +205,22 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
         <button class="copy-btn" id="copy-btn" onclick="copiarChave()">📋 Copiar chave PIX</button>
         <div class="pix-instrucoes">
           Abra seu app bancário → <strong>PIX → Pagar</strong> → escaneie o QR Code ou cole a chave.<br>
-          Após pagar, clique em <strong>"Confirmar Pagamento"</strong> abaixo.
+          Após pagar, clique em <strong id="instr-btn">"Confirmar Pagamento"</strong> abaixo.
         </div>
       </div>
-      <div class="alert-info">⚠️ Após confirmação do PIX, a equipe combinará a entrega presencialmente na escola. Guarde o comprovante!</div>
+      <div class="alert-info" id="aviso-entrega">⚠️ Após confirmação do PIX, a equipe combinará a entrega presencialmente na escola. Guarde o comprovante!</div>
       <div class="stock-error" id="stock-error"></div>
     </div>
 
     <button class="btn-enviar" id="btn-enviar" onclick="confirmarPedido()">
-      ✅ Confirmar Pagamento e Enviar Pedido
+      <span id="btn-txt">✅ Confirmar Pagamento e Enviar Pedido</span>
     </button>
   </div>
 
   <div class="confirmacao" id="confirmacao">
     <img src="logo-capibots.png" alt="Capibots" class="conf-logo">
-    <h2>Pedido Registrado! 🎉</h2>
-    <p>Seu pedido foi enviado com sucesso.<br>A equipe Capibots vai confirmar o PIX e combinar a entrega.</p>
+    <h2 id="conf-titulo">Pedido Registrado! 🎉</h2>
+    <p id="conf-texto">Seu pedido foi enviado com sucesso.<br>A equipe Capibots vai confirmar o PIX e combinar a entrega.</p>
     <div class="pedido-id" id="pedido-id-display"></div>
     <p style="font-size:12px;color:#999">Guarde este número e o comprovante do PIX.</p>
     <br>
@@ -247,12 +247,28 @@ const total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
 
 // Pedido contém apenas itens não-físicos (ex: cotas de vaquinha)?
 const todosVirtuais = itens.length > 0 && itens.every(i => i.fisico === false);
+const BTN_PADRAO = '✅ Confirmar Pagamento e Enviar Pedido';
+const BTN_VAQUINHA = '💛 Já fiz o PIX';
 if (todosVirtuais) {
-  document.getElementById('aviso-virtual').style.display = 'block';
-  document.getElementById('label-nome').textContent = 'Nome completo (opcional)';
-  document.getElementById('nome').removeAttribute('required');
-  document.getElementById('label-whatsapp').textContent = 'WhatsApp (opcional)';
-  document.getElementById('whatsapp').removeAttribute('required');
+  // Contribuição: só nome (opcional) e um contato (opcional); sem turma, e-mail, observações nem entrega
+  const $ = id => document.getElementById(id);
+  $('titulo').textContent = '💛 Contribuir com a vaquinha';
+  $('aviso-virtual').style.display = 'block';
+  $('aviso-virtual').textContent = '💛 Nome e WhatsApp são opcionais, mas ajudam a equipe a te agradecer!';
+  $('label-nome').textContent = 'Seu nome (opcional)';
+  $('nome').placeholder = 'Como quer ser chamado?';
+  $('nome').removeAttribute('required');
+  $('label-whatsapp').textContent = 'WhatsApp (opcional)';
+  $('whatsapp').removeAttribute('required');
+  ['fg-turma','fg-email','fg-obs','aviso-entrega'].forEach(id => $(id).style.display = 'none');
+  $('row-nome').style.gridTemplateColumns = '1fr';
+  $('row-contato').style.gridTemplateColumns = '1fr';
+  $('step-dados').lastChild.textContent = 'Valor';
+  $('step-ok').lastChild.textContent = 'Pronto';
+  $('instr-btn').textContent = '"Já fiz o PIX"';
+  $('btn-txt').textContent = BTN_VAQUINHA;
+  $('conf-titulo').textContent = 'Obrigado pela contribuição! 💛';
+  $('conf-texto').innerHTML = 'Sua contribuição foi registrada.<br>A equipe Capibots vai conferir o PIX. Cada cota ajuda as 9 crianças a chegar à Final Nacional!';
 }
 
 document.getElementById('pix-valor-txt').textContent = 'R$ ' + total;
@@ -495,7 +511,7 @@ window.confirmarPedido = async function() {
     errEl.textContent = '❌ ' + (err.message || 'Erro ao registrar. Tente novamente.');
     errEl.style.display = 'block';
     btn.disabled = false;
-    btn.innerHTML = '✅ Confirmar Pagamento e Enviar Pedido';
+    btn.textContent = todosVirtuais ? BTN_VAQUINHA : BTN_PADRAO;
   }
 };
 </script>
