@@ -319,6 +319,33 @@ tr:hover td{background:#fafafa;}
               </div>
             </div>
 
+            <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.4rem">
+              <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);margin-bottom:1rem">📅 Modelo de venda</div>
+              <div class="fg-e">
+                <label>Como este produto é vendido</label>
+                <select id="det-modelo" onchange="alternarModelo()">
+                  <option value="">🛍️ Venda normal (entrega combinada com a equipe)</option>
+                  <option value="pre-reserva">📅 Pré-reserva com retirada (local e horário escolhidos no checkout)</option>
+                </select>
+              </div>
+              <div id="det-pre" style="display:none;margin-top:.9rem">
+                <div class="fg-e" style="margin-bottom:.9rem">
+                  <label>Locais de retirada (um por linha)</label>
+                  <textarea id="det-locais" rows="3" style="width:100%;resize:vertical" placeholder="Paizódromo&#10;Portaria do Infantil"></textarea>
+                </div>
+                <div class="fg-e" style="margin-bottom:.9rem">
+                  <label>Datas e horários de retirada</label>
+                  <div id="det-janelas"></div>
+                  <button type="button" onclick="addJanelaRow()" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:6px 14px;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;cursor:pointer;color:var(--text-muted)">+ Adicionar data</button>
+                </div>
+                <div class="fg-e">
+                  <label>Aviso no checkout (opcional)</label>
+                  <input type="text" id="det-aviso" placeholder="ex: Leve o comprovante do PIX" style="width:100%">
+                </div>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:6px;display:block">Datas que já passaram deixam de ser oferecidas. Sem nenhuma data futura, as pré-reservas ficam encerradas. Estoque inicial = quantas unidades você aceita reservar.</small>
+              </div>
+            </div>
+
           </div>
 
           <!-- Coluna direita -->
@@ -447,6 +474,7 @@ import { getFirestore, collection, doc, getDoc, onSnapshot,
          updateDoc, setDoc, addDoc, serverTimestamp, increment }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { MODELO_PRE_RESERVA, normalizarRetirada } from "./retirada.js";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -552,6 +580,12 @@ function calcComprometido() {
   return comp;
 }
 
+// Onde e quando o cliente vai retirar (pedidos com pré-reserva)
+function retiradaHtml(p) {
+  return (p.retiradas||[]).map(r =>
+    `<div style="font-size:10px;color:var(--laranja-escuro);white-space:nowrap">📍 ${r.local} · ${r.rotulo}</div>`).join('');
+}
+
 // Pedido só de cotas da vaquinha: não tem entrega, o PIX confirmado já conclui
 function isVirtual(p) {
   const it = p.itens || [];
@@ -603,7 +637,7 @@ function renderPedidos() {
       <th>Status</th><th>Data</th>${soVirtual ? '' : '<th>Entrega</th>'}<th>Ações</th>
     </tr></thead>
     <tbody>${ord.map(p => {
-      const eis = (p.itens||[]).map(i=>`${i.emoji} ${i.qty}×`).join(' ');
+      const eis = (p.itens||[]).map(i=>`${i.emoji} ${i.qty}×`).join(' ') + retiradaHtml(p);
       const virt = isVirtual(p);
       let ac = '';
       if (virt && (p.status==='novo' || p.status==='pagamento_confirmado')) {
@@ -666,7 +700,7 @@ window.abrirModalEntrega = function(docId) {
   const eis = (p.itens||[]).map(i=>`${i.emoji} ${i.qty}× ${i.nome}`).join('<br>');
   const clienteInfo = [p.nome, p.turma, p.whatsapp].filter(Boolean).join(' · ') || 'Anônimo';
   document.getElementById('modal-entrega-info').innerHTML =
-    `<strong>${clienteInfo}</strong><br>${eis}<br><strong>Total: ${fmt(p.total)}</strong>`;
+    `<strong>${clienteInfo}</strong><br>${eis}${retiradaHtml(p)}<br><strong>Total: ${fmt(p.total)}</strong>`;
   document.getElementById('modal-entregador').textContent =
     `👤 Entregue por: ${usuarioLogado?.nome || usuarioLogado?.username || 'Admin'}`;
   document.getElementById('modal-obs').value = '';
@@ -772,11 +806,26 @@ function renderEstoqueLista() {
         <td style="white-space:nowrap">
           <button class="btn-a ${ativo?'btn-ca':'btn-pg'}" onclick="toggleAtivo('${p.id}',${ativo})">${ativo?'Desativar':'Ativar'}</button>
           <button class="btn-a btn-en" onclick="abrirDetalheProduto('${p.id}')">✏️ Editar</button>
+          <button class="btn-a btn-en" onclick="copiarProduto('${p.id}')">📄 Copiar</button>
         </td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
 }
+
+// Duplica o produto com os mesmos dados; o id ganha o sufixo -copy (-copy2, -copy3... se já existir)
+window.copiarProduto = async function(id) {
+  const orig = estoqueRT[id];
+  if (!orig) return;
+  let novoId = id + '-copy';
+  for (let n = 2; estoqueRT[novoId]; n++) novoId = `${id}-copy${n}`;
+  if (!confirm(`Copiar "${orig.nome||id}" para o id "${novoId}"?`)) return;
+  try {
+    const { id: _, ...dados } = orig;
+    await setDoc(doc(db,'estoque',novoId), { ...dados, criadoEm: serverTimestamp() });
+    abrirDetalheProduto(novoId);
+  } catch(err) { alert('Erro ao copiar: '+err.message); }
+};
 
 window.toggleAtivo = async function(id, currentlyAtivo) {
   try {
@@ -976,6 +1025,37 @@ window.voltarLista = function() {
   renderEstoqueLista();
 };
 
+// ── MODELO DE VENDA (pré-reserva) ──────────────────────────────
+window.alternarModelo = function() {
+  document.getElementById('det-pre').style.display =
+    document.getElementById('det-modelo').value === MODELO_PRE_RESERVA ? 'block' : 'none';
+};
+
+window.addJanelaRow = function(j = {}) {
+  const row = document.createElement('div');
+  row.className = 'janela-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap';
+  row.innerHTML = `<input type="date" class="j-data" value="${j.data||''}">
+    <input type="time" class="j-ini" value="${j.inicio||''}"> <span>às</span>
+    <input type="time" class="j-fim" value="${j.fim||''}">
+    <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--vm);font-weight:900">✕</button>`;
+  document.getElementById('det-janelas').appendChild(row);
+};
+
+// Lê o formulário de pré-reserva; devolve a retirada pronta ou lança erro com a mensagem para a equipe
+function lerRetiradaForm() {
+  const locais = document.getElementById('det-locais').value.split('\n');
+  const janelas = [...document.querySelectorAll('#det-janelas .janela-row')].map(r => ({
+    data: r.querySelector('.j-data').value, inicio: r.querySelector('.j-ini').value, fim: r.querySelector('.j-fim').value,
+  }));
+  const r = normalizarRetirada({ locais, janelas, aviso: document.getElementById('det-aviso').value });
+  if (!r.locais.length) throw new Error('Informe ao menos um local de retirada.');
+  if (r.janelas.length !== janelas.length) throw new Error('Preencha data, início e fim de cada horário de retirada (ou remova a linha).');
+  if (!r.janelas.length) throw new Error('Informe ao menos uma data de retirada.');
+  if (r.janelas.some(j => j.fim <= j.inicio)) throw new Error('O horário final precisa ser depois do inicial.');
+  return r;
+}
+
 function popularFormDetalhe(id) {
   const isNovo = id === null;
   const p = isNovo ? {} : (estoqueRT[id] || {});
@@ -995,6 +1075,14 @@ function popularFormDetalhe(id) {
   document.getElementById('det-tagCor').value = p.tagCor || 'tag-laranja';
   document.getElementById('det-custo').value  = typeof p.custoUnitario === 'number' ? p.custoUnitario : '';
   document.getElementById('det-imagens').value = Array.isArray(p.imagens) ? p.imagens.join('\n') : '';
+  document.getElementById('det-modelo').value = p.modelo === MODELO_PRE_RESERVA ? MODELO_PRE_RESERVA : '';
+  const ret = normalizarRetirada(p.retirada);
+  document.getElementById('det-locais').value = ret.locais.join('\n');
+  document.getElementById('det-aviso').value  = ret.aviso || '';
+  document.getElementById('det-janelas').innerHTML = '';
+  ret.janelas.forEach(j => addJanelaRow(j));
+  if (p.modelo === MODELO_PRE_RESERVA && !ret.janelas.length) addJanelaRow();
+  alternarModelo();
 
   const btnSalvar = document.getElementById('btn-salvar-produto');
   btnSalvar.disabled = false;
@@ -1072,6 +1160,13 @@ window.salvarProduto = async function() {
   if (!nome) return alert('Nome é obrigatório!');
   if (isNaN(preco)||preco<0) return alert('Preço inválido!');
 
+  const preReserva = document.getElementById('det-modelo').value === MODELO_PRE_RESERVA;
+  let retirada = null;
+  if (preReserva) {
+    try { retirada = lerRetiradaForm(); } catch(e) { return alert(e.message); }
+  }
+  const modeloCampos = { modelo: preReserva ? MODELO_PRE_RESERVA : null, retirada };
+
   const btn = document.getElementById('btn-salvar-produto');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
@@ -1087,14 +1182,14 @@ window.salvarProduto = async function() {
         nome, emoji, preco,
         quantidade: qtdIni, estoqueInicial: qtdIni,
         fisico, cor: cor||null, tag: tag||null, tagCor: tagCor||null,
-        desc: desc||null, imagens: imgs,
+        desc: desc||null, imagens: imgs, ...modeloCampos,
         custoUnitario: !isNaN(custo)&&custo>=0 ? custo : null,
         ativo: true,
         criadoEm: serverTimestamp(),
       });
       voltarLista();
     } else {
-      const payload = { nome, emoji, preco, fisico, cor: cor||null, tag: tag||null, tagCor: tagCor||null, desc: desc||null, imagens: imgs };
+      const payload = { nome, emoji, preco, fisico, cor: cor||null, tag: tag||null, tagCor: tagCor||null, desc: desc||null, imagens: imgs, ...modeloCampos };
       if (!isNaN(custo)&&custo>=0) payload.custoUnitario = custo;
       await setDoc(doc(db,'estoque',produtoEmEdicao), payload, { merge:true });
       btn.disabled = false; btn.textContent = '✅ Salvo!';

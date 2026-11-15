@@ -103,6 +103,13 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   padding:10px 14px;font-size:13px;color:#856404;margin-top:.75rem;
 }
 
+/* RETIRADA (pré-reserva) */
+.ret-grupo{padding:.9rem 0;border-bottom:1px solid var(--border);}
+.ret-grupo:first-of-type{padding-top:0;}
+.ret-grupo:last-of-type{border-bottom:none;padding-bottom:0;}
+.ret-prod{font-size:13px;font-weight:700;margin-bottom:.7rem;}
+.ret-aviso{font-size:12px;color:var(--text-muted);line-height:1.5;}
+
 /* BOTÃO SUBMIT */
 .btn-enviar{
   width:100%;background:var(--laranja);color:#fff;border:none;border-radius:50px;
@@ -190,6 +197,11 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
       <div class="fg" id="fg-obs"><label>Observações</label><textarea id="obs" placeholder="Alguma observação?"></textarea></div>
     </div>
 
+    <div class="card" id="card-retirada" style="display:none">
+      <div class="card-tit">📍 Retirada da pré-reserva</div>
+      <div id="retirada-grupos"></div>
+    </div>
+
     <div class="card">
       <div class="card-tit">💸 Pagamento via PIX</div>
       <div class="pix-box">
@@ -235,6 +247,7 @@ import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/fireb
 import { getFirestore, collection, doc, getDoc, addDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { agruparRetiradas, janelasAbertas, rotuloJanela, normalizarRetirada, ehPreReserva, reservaAberta } from "./retirada.js";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -284,6 +297,67 @@ resumoEl.innerHTML = itens.length === 0
         <span class="pi-qty">${i.qty}× R$ ${i.preco}</span>
         <span class="pi-tot">R$ ${i.preco * i.qty}</span>
       </div>`).join('');
+
+// ── RETIRADA (pré-reserva) ─────────────────────────────────────
+// Só aparece quando há produto de pré-reserva no carrinho; produtos com as mesmas opções dividem uma escolha
+const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const grupos = agruparRetiradas(itens);
+const temPreReserva = grupos.length > 0;
+
+function opcoes(lista, rotulo) {
+  const unica = lista.length === 1;
+  return (unica ? '' : '<option value="">Escolha...</option>') +
+    lista.map((v, i) => `<option value="${i}">${esc(rotulo(v))}</option>`).join('');
+}
+
+if (temPreReserva) {
+  document.getElementById('card-retirada').style.display = 'block';
+  document.getElementById('retirada-grupos').innerHTML = grupos.map((g, n) => `
+    <div class="ret-grupo">
+      <div class="ret-prod">${g.itens.map(i => `${esc(i.emoji)} ${esc(i.nome)}`).join(', ')}</div>
+      <div class="form-row">
+        <div class="fg"><label>Onde retirar *</label>
+          <select id="ret-local-${n}">${opcoes(g.retirada.locais, l => l)}</select></div>
+        <div class="fg"><label>Quando retirar *</label>
+          <select id="ret-janela-${n}">${opcoes(janelasAbertas(g.retirada), rotuloJanela)}</select></div>
+      </div>
+      ${g.retirada.aviso ? `<div class="ret-aviso">${esc(g.retirada.aviso)}</div>` : ''}
+    </div>`).join('');
+  document.getElementById('aviso-entrega').textContent =
+    '⚠️ Pré-reserva: leve o comprovante do PIX e retire no local e horário escolhidos acima.';
+}
+
+// Lê o que a pessoa escolheu; devolve null (e avisa) se faltar algo
+function lerEscolhasRetirada() {
+  const escolhas = [];
+  for (const [n, g] of grupos.entries()) {
+    const l = document.getElementById(`ret-local-${n}`).value;
+    const j = document.getElementById(`ret-janela-${n}`).value;
+    if (l === '' || j === '') { alert('Escolha onde e quando retirar a pré-reserva!'); return null; }
+    const janela = janelasAbertas(g.retirada)[+j];
+    escolhas.push({
+      produtos: g.itens.map(i => i.id),
+      local: g.retirada.locais[+l],
+      data: janela.data, inicio: janela.inicio, fim: janela.fim,
+      rotulo: rotuloJanela(janela),
+    });
+  }
+  return escolhas;
+}
+
+// Confere com a configuração atual do produto (o carrinho pode estar velho)
+function validarRetiradas(estoqueAtual, escolhas) {
+  for (const e of escolhas) {
+    for (const id of e.produtos) {
+      const atual = estoqueAtual[id];
+      const nome = itens.find(i => i.id === id)?.nome || id;
+      if (!ehPreReserva(atual) || !reservaAberta(atual)) throw new Error(`As pré-reservas de "${nome}" foram encerradas.`);
+      const r = normalizarRetirada(atual.retirada);
+      const ok = r.locais.includes(e.local) && janelasAbertas(atual.retirada).some(j => j.data === e.data && j.inicio === e.inicio && j.fim === e.fim);
+      if (!ok) throw new Error(`As opções de retirada de "${nome}" mudaram. Volte à loja, remova o item do carrinho e adicione de novo.`);
+    }
+  }
+}
 
 // ── LÊ CHAVE PIX E TIPO DO FIRESTORE ─────────────────────────
 let PIX_CHAVE = '';
@@ -464,6 +538,7 @@ async function verificarDisponibilidade() {
       throw new Error(`Estoque insuficiente para "${item.nome}". Disponível: ${Math.max(0, disp)}, pedido: ${item.qty}.`);
     }
   }
+  return Object.fromEntries(estSnaps.docs.map(d => [d.id, d.data()]));
 }
 
 window.confirmarPedido = async function() {
@@ -477,13 +552,16 @@ window.confirmarPedido = async function() {
   errEl.style.display = 'none';
   if (!todosVirtuais && (!nome || !whatsapp)) { alert('Preencha nome e WhatsApp!'); return; }
   if (!itens.length) { alert('Carrinho vazio!'); return; }
+  const retiradas = temPreReserva ? lerEscolhasRetirada() : [];
+  if (retiradas === null) return;
 
   const btn = document.getElementById('btn-enviar');
   btn.disabled = true;
   btn.textContent = '⏳ Verificando disponibilidade...';
 
   try {
-    await verificarDisponibilidade();
+    const estoqueAtual = await verificarDisponibilidade();
+    validarRetiradas(estoqueAtual, retiradas);
 
     btn.textContent = '⏳ Registrando pedido...';
     const idPedido = gerarId();
@@ -494,6 +572,7 @@ window.confirmarPedido = async function() {
       nome, turma, whatsapp, email, obs,
       itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
       total,
+      ...(retiradas.length ? { retiradas } : {}),
       status: 'novo',   // máquina de status: novo → pagamento_confirmado → entregue
       pix_chave: PIX_CHAVE,  // chave lida do Firestore config/loja
       criadoEm: serverTimestamp(),
@@ -503,6 +582,10 @@ window.confirmarPedido = async function() {
     document.getElementById('form-section').style.display = 'none';
     document.getElementById('confirmacao').style.display  = 'block';
     document.getElementById('pedido-id-display').textContent = idPedido;
+    if (retiradas.length) {
+      document.getElementById('conf-texto').innerHTML = 'Seu pedido foi enviado com sucesso.<br>A equipe Capibots vai conferir o PIX.<br><br><strong>Retirada:</strong><br>' +
+        retiradas.map(r => `📍 ${esc(r.local)} · ${esc(r.rotulo)}`).join('<br>');
+    }
     document.querySelectorAll('.step').forEach((s,i) =>
       s.className = 'step ' + (i < 3 ? 'done' : 'active'));
 

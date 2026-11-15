@@ -83,6 +83,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .prod-tag{display:inline-block;background:var(--laranja);color:#fff;font-size:11px;font-weight:800;padding:3px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
 .prod-nome{font-family:'Baloo 2',sans-serif;font-size:26px;font-weight:900;color:var(--preto);line-height:1.1;margin-bottom:8px;}
 .prod-preco{font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:900;color:var(--laranja);margin-bottom:4px;}
+.prod-retirada{background:var(--laranja-claro,#fff0e6);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;margin-bottom:1.25rem;}
 .prod-estoque{font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;}
 .prod-estoque.ok{color:var(--verde);font-weight:700;}
 .prod-estoque.esgotado{color:#dc2626;font-weight:700;}
@@ -252,6 +253,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
         <div class="prod-preco" id="prod-preco"></div>
         <div class="prod-estoque" id="prod-estoque"></div>
         <div class="prod-desc" id="prod-desc"></div>
+        <div class="prod-retirada" id="prod-retirada" style="display:none"></div>
 
         <div class="qty-section">
           <div class="qty-label">Quantidade</div>
@@ -301,6 +303,7 @@ import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/fireb
 import { getFirestore, doc, getDoc, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { ehPreReserva, reservaAberta, resumoJanelas, normalizarRetirada } from "./retirada.js";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -374,12 +377,13 @@ window.mudaQty = function(delta) {
 
 // ── ADD CARRINHO ───────────────────────────────────────────────
 window.addAoCarrinho = function() {
-  if (!produtoAtual) return;
+  if (!produtoAtual || !reservaAberta(produtoAtual)) return;
   const p = produtoAtual;
   // item não físico (vaquinha) com carrinho vazio: vai direto ao pagamento
   const irDireto = p.fisico === false && Object.keys(carrinho).length === 0;
   if (carrinho[p.id]) carrinho[p.id].qty += qtySelecionada;
-  else carrinho[p.id] = { id:p.id, nome:p.nome, emoji:p.emoji||'🛍️', preco:p.preco, qty:qtySelecionada, fisico:p.fisico };
+  else carrinho[p.id] = { id:p.id, nome:p.nome, emoji:p.emoji||'🛍️', preco:p.preco, qty:qtySelecionada, fisico:p.fisico,
+    ...(ehPreReserva(p) ? { modelo:p.modelo, retirada:p.retirada } : {}) };
   salvarCarrinho();
   if (irDireto) { window.location.href = 'checkout.html'; return; }
   atualizarContadorCarrinho();
@@ -400,7 +404,9 @@ function atualizarBotao() {
   const btn  = document.getElementById('btn-add');
   btn.disabled = disp <= 0;
   const direto = p?.fisico === false && Object.keys(carrinho).length === 0;
-  btn.textContent = disp > 0 ? (direto ? '💛 Ir para o pagamento' : `🛒 Adicionar ao Carrinho`) : 'Esgotado';
+  const aberta = reservaAberta(p);
+  btn.disabled = disp <= 0 || !aberta;
+  btn.textContent = !aberta ? 'Pré-reservas encerradas' : disp > 0 ? (direto ? '💛 Ir para o pagamento' : (ehPreReserva(p) ? '📅 Reservar' : `🛒 Adicionar ao Carrinho`)) : 'Esgotado';
   document.getElementById('qty-mais').disabled  = qtySelecionada >= disp;
   document.getElementById('qty-menos').disabled = qtySelecionada <= 1;
 
@@ -433,6 +439,17 @@ async function carregarProduto() {
     document.getElementById('prod-desc').textContent  = p.desc || '';
 
     atualizarBotao();
+
+    if (ehPreReserva(p)) {
+      const r = normalizarRetirada(p.retirada);
+      document.getElementById('prod-retirada').innerHTML =
+        `<strong>📅 Pré-reserva com retirada</strong><br>📍 ${r.locais.join(' ou ')}<br>🕐 ${reservaAberta(p) ? resumoJanelas(p.retirada) : 'pré-reservas encerradas'}` +
+        (r.aviso ? `<br>${r.aviso}` : '') +
+        '<br><small>O local e o horário são escolhidos na hora do pagamento.</small>';
+      document.getElementById('prod-retirada').style.display = 'block';
+      const chip = document.querySelector('.chip-info');
+      if (chip) chip.textContent = '📅 Pré-reserva';
+    }
 
     // Galeria de imagens
     imagens = Array.isArray(p.imagens) ? p.imagens : [];

@@ -26,6 +26,7 @@ The Firebase ESM imports (`https://www.gstatic.com/firebasejs/11.0.1/...`) requi
 | `produto.html` | Product detail page with image gallery |
 | `checkout.html` | Checkout flow: customer form → PIX display → order confirmation |
 | `admin.html` | Admin panel: orders, inventory, stock entries, report, config |
+| `retirada.js` | Módulo compartilhado do modelo de pré-reserva com retirada (datas, agrupamento, validação) |
 | `firebase-config.js` | Firebase project config and (legacy) PIX key fallback |
 | `imagens/` | Product photos referenced in Firestore `imagens[]` field |
 
@@ -44,6 +45,15 @@ All runtime data lives in Firestore (project `capibots-loja`). The SDK is loaded
 - **`usuarios`** — admin accounts. Keyed by username. Fields: `senha` (plaintext), `nome`, `ativo`. Authentication is done client-side by reading this document.
 
 - **`config/loja`** — single document holding `pix_chave` (PIX key string) and `pix_tipo` (`email` | `telefone` | `cpf` | `cnpj` | `aleatoria`).
+
+## Pré-reserva com retirada
+
+Qualquer produto pode ser vendido como pré-reserva (geladinho, bolo, encomendas), configurado no admin em Produtos → Modelo de venda. Em `estoque/{id}`: `modelo: 'pre-reserva'` e `retirada: { locais[], janelas[{data:'AAAA-MM-DD', inicio:'HH:MM', fim:'HH:MM'}], aviso? }`. Cada produto tem seus próprios locais e datas.
+
+- `index.html` lista esses produtos na seção "Pré-reservas"; datas passadas somem e, sem data futura, o produto aparece como encerrado.
+- `checkout.html` só mostra o cartão "Retirada" quando há pré-reserva no carrinho. Produtos com opções idênticas dividem uma única escolha de local e horário. No envio, as escolhas são revalidadas contra o `estoque` atual.
+- O pedido guarda `retiradas: [{ produtos[], local, data, inicio, fim, rotulo }]`; o admin mostra isso na lista de pedidos e no modal de entrega.
+- Estoque funciona como nas demais vendas (o "estoque inicial" é o limite de reservas).
 
 ## Key Architecture Decisions
 
