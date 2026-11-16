@@ -510,10 +510,11 @@ window.login = async function() {
     const data = snap.data();
     if (data.senha !== senha) throw new Error('wrong_password');
     if (data.ativo === false) throw new Error('inactive');
-    usuarioLogado = { username, nome: data.nome || username };
+    usuarioLogado = { username, nome: data.nome || username, perfil: PERFIS.includes(data.perfil) ? data.perfil : 'admin' };
     sessionStorage.setItem('admin_usuario', JSON.stringify(usuarioLogado));
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('sb-user-label').textContent = '👤 ' + usuarioLogado.nome;
+    aplicarPerfil();
     iniciarListeners();
   } catch(err) {
     console.error('[Login]', err.code || err.message, err);
@@ -530,6 +531,20 @@ window.login = async function() {
   }
 };
 
+// Perfis (campo `perfil` em usuarios/{usuario}; ausente = admin):
+//   admin        → tudo
+//   financeiro   → só a aba Pedidos: vê os pedidos e confirma o PIX
+//   visualizador → só a aba Pedidos: apenas acompanha, sem nenhuma ação
+// Atenção: é uma restrição da tela. As regras do Firestore é que impedem de verdade.
+const PERFIS = ['admin', 'financeiro', 'visualizador'];
+const restrito = () => usuarioLogado?.perfil === 'financeiro' || usuarioLogado?.perfil === 'visualizador';
+const podeConfirmarPix = () => !restrito() || usuarioLogado.perfil === 'financeiro';
+function aplicarPerfil() {
+  if (!restrito()) return;
+  document.querySelectorAll('.nav-item').forEach(n => { if (!n.getAttribute('onclick').includes("'pedidos'")) n.style.display = 'none'; });
+  document.querySelector('.sb-name small').textContent = usuarioLogado.perfil === 'financeiro' ? 'Financeiro · Pedidos e PIX' : 'Acompanhamento de pedidos';
+}
+
 window.logout = function() { sessionStorage.removeItem('admin_usuario'); location.reload(); };
 
 const sessao = sessionStorage.getItem('admin_usuario');
@@ -538,6 +553,7 @@ if (sessao) {
     usuarioLogado = JSON.parse(sessao);
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('sb-user-label').textContent = '👤 ' + usuarioLogado.nome;
+    aplicarPerfil();
     iniciarListeners();
   } catch(e) { sessionStorage.removeItem('admin_usuario'); }
 }
@@ -552,7 +568,7 @@ function iniciarListeners() {
     snap.forEach(d => { estoqueRT[d.id] = { id: d.id, ...d.data() }; });
     renderEstoque(); populateEntradaSelect();
   });
-  onSnapshot(collection(db, 'entradas'), snap => {
+  if (!restrito()) onSnapshot(collection(db, 'entradas'), snap => {
     entradasRT = snap.docs
       .map(d => ({ ...d.data(), _docId: d.id }))
       .sort((a,b) => (b.criadoEm?.seconds||0) - (a.criadoEm?.seconds||0));
@@ -562,6 +578,7 @@ function iniciarListeners() {
 
 // ── NAVEGAÇÃO ─────────────────────────────────────────────────
 window.showSec = function(id, el) {
+  if (restrito() && id !== 'pedidos') return;
   document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('ativa');
@@ -649,12 +666,12 @@ function renderPedidos() {
       const virt = isVirtual(p);
       let ac = '';
       if (virt && (p.status==='novo' || p.status==='pagamento_confirmado')) {
-        ac = `<button class="btn-a btn-pg" onclick="confirmarContribuicao('${p._docId}')">✅ Confirmar PIX</button>
-              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
+        ac = (podeConfirmarPix() ? `<button class="btn-a btn-pg" onclick="confirmarContribuicao('${p._docId}')">✅ Confirmar PIX</button>` : '') + (restrito() ? '' :
+              `<button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`);
       } else if (p.status==='novo') {
-        ac = `<button class="btn-a btn-pg" onclick="mudarStatus('${p._docId}','pagamento_confirmado')">✅ Confirmar PIX</button>
-              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
-      } else if (p.status==='pagamento_confirmado') {
+        ac = (podeConfirmarPix() ? `<button class="btn-a btn-pg" onclick="mudarStatus('${p._docId}','pagamento_confirmado')">✅ Confirmar PIX</button>` : '') + (restrito() ? '' :
+              `<button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`);
+      } else if (p.status==='pagamento_confirmado' && !restrito()) {
         ac = `<button class="btn-a btn-en" onclick="abrirModalEntrega('${p._docId}')">📦 Entregar</button>
               <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
       }
@@ -687,6 +704,7 @@ window.filtrar = function(st, el) {
 
 // ── MÁQUINA DE STATUS ──────────────────────────────────────────
 window.mudarStatus = async function(docId, novoStatus) {
+  if (restrito() && !(novoStatus === 'pagamento_confirmado' && podeConfirmarPix())) return;
   try {
     await updateDoc(doc(db, 'pedidos', docId), { status: novoStatus });
   } catch(err) {
@@ -696,12 +714,14 @@ window.mudarStatus = async function(docId, novoStatus) {
 };
 
 window.cancelarPedido = async function(docId, nomePedido) {
+  if (restrito()) return;
   if (!confirm(`Cancelar pedido de ${nomePedido}?\nEsta ação não pode ser desfeita.`)) return;
   await window.mudarStatus(docId, 'cancelado');
 };
 
 // ── MODAL ENTREGA ──────────────────────────────────────────────
 window.abrirModalEntrega = function(docId) {
+  if (restrito()) return;
   const p = pedidosRT.find(p => p._docId === docId);
   if (!p) return;
   pedidoParaEntregar = p;
@@ -719,6 +739,7 @@ window.abrirModalEntrega = function(docId) {
 
 // Cota da vaquinha: confirmar o PIX já conclui (abate a cota do estoque, que move a barra de progresso)
 window.confirmarContribuicao = async function(docId) {
+  if (!podeConfirmarPix()) return;
   const p = pedidosRT.find(p => p._docId === docId);
   if (!p) return;
   try {
@@ -742,6 +763,7 @@ window.fecharModalEntrega = function() {
 };
 
 window.confirmarEntrega = async function() {
+  if (restrito()) return;
   if (!pedidoParaEntregar) return;
   const obs   = document.getElementById('modal-obs').value.trim();
   const docId = pedidoParaEntregar._docId;
