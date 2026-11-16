@@ -136,7 +136,7 @@ main{max-width:1040px;margin:0 auto;padding:2rem 1.5rem 5rem;}
 /* ── PROCESS FLOW ── */
 .process-flow{
   display:flex;align-items:stretch;gap:0;flex-wrap:nowrap;
-  margin-bottom:2.5rem;
+  margin-top:.75rem;
   background:#fff;border-radius:16px;
   border:2px solid var(--verde-claro);
   overflow:hidden;
@@ -452,9 +452,8 @@ footer .verde{color:#6ee88a;}
 @media(max-width:440px){
   .hero-capy{display:none;}
 }
-/* mobile: sem passo a passo e vaquinha compacta */
+/* mobile: vaquinha compacta */
 @media(max-width:640px){
-  .process-flow{display:none !important;}
   .vaquinha-banner{padding:.85rem 1rem;gap:.6rem;margin-bottom:1.25rem;border-radius:14px;align-items:flex-start;}
   .vaquinha-emoji-wrap{position:absolute;top:10px;right:10px;opacity:.9;}
   .vaquinha-emoji-wrap img{width:44px !important;height:44px !important;}
@@ -484,7 +483,6 @@ footer .verde{color:#6ee88a;}
 
     <!-- TEXTO HERO -->
     <div class="hero-text">
-      <div class="hero-badge">⚽ Copa do Mundo 2026</div>
       <h1 class="hero-title">
         Lojinha<br>
         <span class="laranja">Capi</span><span class="verde">bots</span>
@@ -495,7 +493,6 @@ footer .verde{color:#6ee88a;}
       </p>
       <div class="hero-chips">
         <span class="chip">🏫 Escola</span>
-        <span class="chip amarelo">⚽ Copa 2026</span>
         <span class="chip">💚 ODS 4</span>
         <span class="chip">🤖 TBR 2026</span>
       </div>
@@ -516,34 +513,6 @@ footer .verde{color:#6ee88a;}
 </nav>
 
 <main>
-  <!-- FLUXO DO PEDIDO -->
-  <div class="process-flow">
-    <div class="process-step">
-      <div class="step-num-badge">1</div>
-      <div class="step-emoji">🛒</div>
-      <div class="step-title">Escolha & Compre</div>
-      <div class="step-desc">Selecione os produtos e finalize no carrinho</div>
-    </div>
-    <div class="process-step">
-      <div class="step-num-badge">2</div>
-      <div class="step-emoji">💸</div>
-      <div class="step-title">Pague via PIX</div>
-      <div class="step-desc">Rápido, seguro e sem taxas adicionais</div>
-    </div>
-    <div class="process-step">
-      <div class="step-num-badge">3</div>
-      <div class="step-emoji">📞</div>
-      <div class="step-title">Aguarde Contato</div>
-      <div class="step-desc">A equipe combina a retirada via WhatsApp</div>
-    </div>
-    <div class="process-step">
-      <div class="step-num-badge">4</div>
-      <div class="step-emoji">🎁</div>
-      <div class="step-title">Retire no Colégio</div>
-      <div class="step-desc">Receba seus produtos na escola</div>
-    </div>
-  </div>
-
   <!-- VAQUINHA DESTAQUE -->
   <div class="vaquinha-banner" id="vaquinha-banner" style="display:none">
     <div class="vaquinha-emoji-wrap"><img src="capy-vaca.png" alt="Capivara Vaquinha" style="width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3))"></div>
@@ -593,6 +562,35 @@ footer .verde{color:#6ee88a;}
     <div class="loading-state">
       <div class="spinner"></div>
       Carregando produtos...
+    </div>
+  </div>
+
+  <!-- FLUXO DO PEDIDO -->
+  <div class="section-title" style="margin-top:2.5rem">🧭 Como funciona</div>
+  <div class="process-flow">
+    <div class="process-step">
+      <div class="step-num-badge">1</div>
+      <div class="step-emoji">🛒</div>
+      <div class="step-title">Escolha & Compre</div>
+      <div class="step-desc">Selecione os produtos e finalize no carrinho</div>
+    </div>
+    <div class="process-step">
+      <div class="step-num-badge">2</div>
+      <div class="step-emoji">💸</div>
+      <div class="step-title">Pague via PIX</div>
+      <div class="step-desc">Rápido, seguro e sem taxas adicionais</div>
+    </div>
+    <div class="process-step">
+      <div class="step-num-badge">3</div>
+      <div class="step-emoji">📞</div>
+      <div class="step-title">Aguarde Contato</div>
+      <div class="step-desc">A equipe combina a retirada via WhatsApp</div>
+    </div>
+    <div class="process-step">
+      <div class="step-num-badge">4</div>
+      <div class="step-emoji">🎁</div>
+      <div class="step-title">Retire no Colégio</div>
+      <div class="step-desc">Receba seus produtos na escola</div>
     </div>
   </div>
 
