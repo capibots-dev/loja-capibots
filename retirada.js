@@ -5,7 +5,9 @@
 //   retirada: {
 //     locais:  ['Paizódromo', 'Portaria do Infantil'],
 //     janelas: [{ data: '2026-11-18', inicio: '17:20', fim: '18:30' }],
-//     aviso:   'texto opcional mostrado no checkout'
+//     aviso:   'texto opcional mostrado no checkout',
+//     reservaInicio: '2026-11-16T08:00',   (opcional) quando as pré-reservas passam a ser aceitas
+//     reservaFim:    '2026-11-17T20:00'    (opcional) quando deixam de ser aceitas
 //   }
 // O checkout só mostra a escolha de local e horário quando há produto assim no carrinho, e produtos com as
 // mesmas opções compartilham uma única escolha.
@@ -29,7 +31,9 @@ export function normalizarRetirada(r) {
     .filter(j => /^\d{4}-\d{2}-\d{2}$/.test(j?.data) && /^\d{2}:\d{2}$/.test(j?.inicio) && /^\d{2}:\d{2}$/.test(j?.fim))
     .map(j => ({ data: j.data, inicio: j.inicio, fim: j.fim }));
   const aviso = String(r?.aviso || '').trim();
-  return { locais, janelas, ...(aviso ? { aviso } : {}) };
+  const dh = v => (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v) ? v : '');
+  const reservaInicio = dh(r?.reservaInicio), reservaFim = dh(r?.reservaFim);
+  return { locais, janelas, ...(aviso ? { aviso } : {}), ...(reservaInicio ? { reservaInicio } : {}), ...(reservaFim ? { reservaFim } : {}) };
 }
 
 export const ehPreReserva = p => p?.modelo === MODELO_PRE_RESERVA && !!p.retirada;
@@ -37,8 +41,40 @@ export const ehPreReserva = p => p?.modelo === MODELO_PRE_RESERVA && !!p.retirad
 // Datas que já passaram deixam de ser oferecidas
 export const janelasAbertas = r => normalizarRetirada(r).janelas.filter(j => j.data >= hoje());
 
-// Pré-reserva sem local ou sem data futura não pode ser vendida
-export const reservaAberta = p => !ehPreReserva(p) || (normalizarRetirada(p.retirada).locais.length > 0 && janelasAbertas(p.retirada).length > 0);
+const agora = () => {
+  const d = new Date();
+  return `${hoje()}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+// 'antes' (ainda não abriu), 'aberta' ou 'encerrada' (período acabou, sem local ou sem data de retirada futura)
+export function statusReserva(p) {
+  if (!ehPreReserva(p)) return 'aberta';
+  const r = normalizarRetirada(p.retirada);
+  if (!r.locais.length || !janelasAbertas(r).length) return 'encerrada';
+  const t = agora();
+  if (r.reservaFim && t >= r.reservaFim) return 'encerrada';
+  if (r.reservaInicio && t < r.reservaInicio) return 'antes';
+  return 'aberta';
+}
+
+// Pré-reserva só pode ser feita dentro do período e com local e data de retirada futura
+export const reservaAberta = p => statusReserva(p) === 'aberta';
+
+// '16/11 às 8h' (aceita '2026-11-16T08:00')
+export function rotuloDataHora(v) {
+  const [d, h] = v.split('T');
+  const [, m, dia] = d.split('-');
+  return `${dia}/${m} às ${hora(h)}`;
+}
+
+// Texto curto para vitrine e página do produto quando a reserva não está aberta
+export function avisoReserva(p) {
+  const st = statusReserva(p);
+  if (st === 'antes') return `pré-reservas abrem em ${rotuloDataHora(normalizarRetirada(p.retirada).reservaInicio)}`;
+  if (st === 'encerrada') return 'pré-reservas encerradas';
+  const fim = normalizarRetirada(p.retirada).reservaFim;
+  return fim ? `pré-reservas até ${rotuloDataHora(fim)}` : '';
+}
 
 // 'quarta, 18/11 · 17h20 às 18h30'
 export function rotuloJanela(j) {

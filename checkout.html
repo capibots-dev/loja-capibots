@@ -103,6 +103,15 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   padding:10px 14px;font-size:13px;color:#856404;margin-top:.75rem;
 }
 
+/* CONVITE PARA DOAR */
+.doacao-banner{margin-bottom:1.25rem;background:linear-gradient(135deg,#fffbe6,#fff0a0);border:2px solid #ffd600;border-radius:14px;padding:12px 14px;}
+.doacao-tit{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);line-height:1.2;}
+.doacao-sub{font-size:12px;color:var(--text-muted);margin:3px 0 10px;line-height:1.4;}
+.doacao-btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.doacao-btns button{background:#fff;border:1.5px solid #e0c000;border-radius:50px;padding:6px 13px;font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:800;color:var(--preto);cursor:pointer;}
+.doacao-btns button:hover{background:#ffd600;}
+.doacao-btns input{width:110px;border:1.5px solid #e0c000;border-radius:50px;padding:6px 12px;font-size:13px;}
+
 /* RETIRADA (pré-reserva) */
 .ret-grupo{padding:.9rem 0;border-bottom:1px solid var(--border);}
 .ret-grupo:first-of-type{padding-top:0;}
@@ -172,6 +181,8 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   <div id="form-section">
     <h1 id="titulo">📋 Finalizar Pedido</h1>
 
+    <div id="aviso-removidos" style="display:none;background:#fff3cd;border:1.5px solid #ffc107;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.5;color:#6b4e00;margin-bottom:1.25rem"></div>
+
     <div class="card">
       <div class="card-tit">🛒 Resumo</div>
       <div id="resumo-items"></div>
@@ -180,6 +191,8 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
         <span class="vl" id="total-display">R$ 0</span>
       </div>
     </div>
+
+    <div class="doacao-banner" id="doacao-checkout" style="display:none"></div>
 
     <div class="card">
       <div class="card-tit">👤 Seus Dados</div>
@@ -247,7 +260,7 @@ import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/fireb
 import { getFirestore, collection, doc, getDoc, addDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { agruparRetiradas, janelasAbertas, rotuloJanela, normalizarRetirada, ehPreReserva, reservaAberta } from "./retirada.js";
+import { agruparRetiradas, janelasAbertas, rotuloJanela, normalizarRetirada, ehPreReserva, reservaAberta } from "./retirada.js?v=2";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -255,54 +268,38 @@ const db  = getFirestore(app);
 // Lê carrinho da sessão
 let carrinho = {};
 try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } catch(e){}
-const itens = Object.values(carrinho);
-const total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
+let itens = [], total = 0, todosVirtuais = false, grupos = [], temPreReserva = false;
+let vaquinhaDoc = null; // estoque/vaquinha atual (para o convite de doação)
 
-// Pedido contém apenas itens não-físicos (ex: cotas de vaquinha)?
-const todosVirtuais = itens.length > 0 && itens.every(i => i.fisico === false);
 const BTN_PADRAO = '✅ Confirmar Pagamento e Enviar Pedido';
 const BTN_VAQUINHA = '💛 Já fiz o PIX';
-if (todosVirtuais) {
-  // Contribuição: só nome (opcional) e um contato (opcional); sem turma, e-mail, observações nem entrega
-  const $ = id => document.getElementById(id);
-  $('titulo').textContent = '💛 Contribuir com a vaquinha';
-  $('aviso-virtual').style.display = 'block';
-  $('aviso-virtual').textContent = '💛 Nome e WhatsApp são opcionais, mas ajudam a equipe a te agradecer!';
-  $('label-nome').textContent = 'Seu nome (opcional)';
-  $('nome').placeholder = 'Como quer ser chamado?';
-  $('nome').removeAttribute('required');
-  $('label-whatsapp').textContent = 'WhatsApp (opcional)';
-  $('whatsapp').removeAttribute('required');
-  ['fg-turma','fg-email','fg-obs','aviso-entrega'].forEach(id => $(id).style.display = 'none');
-  $('row-nome').style.gridTemplateColumns = '1fr';
-  $('row-contato').style.gridTemplateColumns = '1fr';
-  $('step-dados').lastChild.textContent = 'Valor';
-  $('step-ok').lastChild.textContent = 'Pronto';
-  $('instr-btn').textContent = '"Já fiz o PIX"';
-  $('btn-txt').textContent = BTN_VAQUINHA;
-  $('conf-titulo').textContent = 'Obrigado pela contribuição! 💛';
-  $('conf-texto').innerHTML = 'Sua contribuição foi registrada.<br>A equipe Capibots vai conferir o PIX. Cada cota ajuda as 9 crianças a chegar à Final Nacional!';
-}
-
-document.getElementById('pix-valor-txt').textContent = 'R$ ' + total;
-document.getElementById('total-display').textContent = 'R$ ' + total;
-
-const resumoEl = document.getElementById('resumo-items');
-resumoEl.innerHTML = itens.length === 0
-  ? '<p style="color:#999;font-size:13px">Carrinho vazio.</p>'
-  : itens.map(i => `
-      <div class="p-item">
-        <span class="pi-em">${i.emoji}</span>
-        <span class="pi-nome">${i.nome}</span>
-        <span class="pi-qty">${i.qty}× R$ ${i.preco}</span>
-        <span class="pi-tot">R$ ${i.preco * i.qty}</span>
-      </div>`).join('');
-
-// ── RETIRADA (pré-reserva) ─────────────────────────────────────
-// Só aparece quando há produto de pré-reserva no carrinho; produtos com as mesmas opções dividem uma escolha
+const AVISO_PADRAO = '⚠️ Após confirmação do PIX, a equipe combinará a entrega presencialmente na escola. Guarde o comprovante!';
+const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const grupos = agruparRetiradas(itens);
-const temPreReserva = grupos.length > 0;
+
+function salvarCarrinho() { sessionStorage.setItem('capibots_cart', JSON.stringify(carrinho)); }
+
+// Pedido só de itens não-físicos (cotas da vaquinha): formulário enxuto. Também desfaz o modo quando deixa de valer.
+function aplicarModo(virtual) {
+  $('titulo').textContent = virtual ? '💛 Contribuir com a vaquinha' : '📋 Finalizar Pedido';
+  $('aviso-virtual').style.display = virtual ? 'block' : 'none';
+  $('aviso-virtual').textContent = '💛 Nome e WhatsApp são opcionais, mas ajudam a equipe a te agradecer!';
+  $('label-nome').textContent = virtual ? 'Seu nome (opcional)' : 'Nome completo *';
+  $('nome').placeholder = virtual ? 'Como quer ser chamado?' : 'Seu nome completo';
+  $('label-whatsapp').textContent = virtual ? 'WhatsApp (opcional)' : 'WhatsApp *';
+  ['nome','whatsapp'].forEach(id => virtual ? $(id).removeAttribute('required') : $(id).setAttribute('required',''));
+  ['fg-turma','fg-email','fg-obs','aviso-entrega'].forEach(id => $(id).style.display = virtual ? 'none' : '');
+  $('row-nome').style.gridTemplateColumns = virtual ? '1fr' : '';
+  $('row-contato').style.gridTemplateColumns = virtual ? '1fr' : '';
+  $('step-dados').lastChild.textContent = virtual ? 'Valor' : 'Seus Dados';
+  $('step-ok').lastChild.textContent = virtual ? 'Pronto' : 'Confirmado';
+  $('instr-btn').textContent = virtual ? '"Já fiz o PIX"' : '"Confirmar Pagamento"';
+  $('btn-txt').textContent = virtual ? BTN_VAQUINHA : BTN_PADRAO;
+  $('conf-titulo').textContent = virtual ? 'Obrigado pela contribuição! 💛' : 'Pedido Registrado! 🎉';
+  $('conf-texto').innerHTML = virtual
+    ? 'Sua contribuição foi registrada.<br>A equipe Capibots vai conferir o PIX. Cada cota ajuda as 9 crianças a chegar à Final Nacional!'
+    : 'Seu pedido foi enviado com sucesso.<br>A equipe Capibots vai confirmar o PIX e combinar a entrega.';
+}
 
 function opcoes(lista, rotulo) {
   const unica = lista.length === 1;
@@ -310,9 +307,56 @@ function opcoes(lista, rotulo) {
     lista.map((v, i) => `<option value="${i}">${esc(rotulo(v))}</option>`).join('');
 }
 
-if (temPreReserva) {
-  document.getElementById('card-retirada').style.display = 'block';
-  document.getElementById('retirada-grupos').innerHTML = grupos.map((g, n) => `
+// Convite para doar quando ainda não há cotas da vaquinha no pedido
+function renderDoacao() {
+  const el = $('doacao-checkout');
+  const restantes = typeof vaquinhaDoc?.quantidade === 'number' ? vaquinhaDoc.quantidade : 0;
+  if (!vaquinhaDoc || carrinho['vaquinha'] || restantes <= 0 || !itens.length) { el.style.display = 'none'; return; }
+  const valores = [2, 5, 10].filter(v => v <= restantes);
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="doacao-tit">💛 Quer completar com uma doação para a equipe Capibots?</div>
+    <div class="doacao-sub">Cada R$ 1 ajuda as 9 crianças a chegar à Final Nacional, em Curitiba.</div>
+    <div class="doacao-btns">
+      ${valores.map(v => `<button type="button" onclick="doar(${v})">+ R$ ${v}</button>`).join('')}
+      <input type="number" id="doacao-outro" min="1" max="${restantes}" placeholder="Outro valor" inputmode="numeric">
+      <button type="button" onclick="doar(parseInt(document.getElementById('doacao-outro').value))">Doar</button>
+    </div>`;
+}
+window.doar = function(n) {
+  const restantes = typeof vaquinhaDoc?.quantidade === 'number' ? vaquinhaDoc.quantidade : 0;
+  if (!Number.isInteger(n) || n < 1 || n > restantes) { alert('Informe um valor inteiro em reais (mínimo R$ 1).'); return; }
+  carrinho['vaquinha'] = { id: 'vaquinha', nome: 'Cota — Vaquinha Final Nacional', emoji: '🐄', preco: 1, qty: n, fisico: false };
+  salvarCarrinho();
+  renderTudo();
+};
+
+// Recalcula e redesenha resumo, total, retirada, convite de doação e QR Code a partir do carrinho
+function renderTudo() {
+  itens = Object.values(carrinho);
+  total = itens.reduce((s,i) => s + i.preco * i.qty, 0);
+  todosVirtuais = itens.length > 0 && itens.every(i => i.fisico === false);
+  aplicarModo(todosVirtuais);
+
+  $('pix-valor-txt').textContent = 'R$ ' + total;
+  $('total-display').textContent = 'R$ ' + total;
+  $('resumo-items').innerHTML = itens.length === 0
+    ? '<p style="color:#999;font-size:13px">Carrinho vazio. <a href="index.html">Voltar à loja</a></p>'
+    : itens.map(i => `
+      <div class="p-item">
+        <span class="pi-em">${i.emoji}</span>
+        <span class="pi-nome">${i.nome}</span>
+        <span class="pi-qty">${i.qty}× R$ ${i.preco}</span>
+        <span class="pi-tot">R$ ${i.preco * i.qty}</span>
+      </div>`).join('');
+  $('btn-enviar').disabled = itens.length === 0;
+
+  // Retirada: produtos com as mesmas opções dividem uma escolha (mantém o que já foi escolhido ao redesenhar)
+  const escolhido = Object.fromEntries(grupos.map((g, n) => [g.chave, [$(`ret-local-${n}`)?.value, $(`ret-janela-${n}`)?.value]]));
+  grupos = agruparRetiradas(itens);
+  temPreReserva = grupos.length > 0;
+  $('card-retirada').style.display = temPreReserva ? 'block' : 'none';
+  $('retirada-grupos').innerHTML = grupos.map((g, n) => `
     <div class="ret-grupo">
       <div class="ret-prod">${g.itens.map(i => `${esc(i.emoji)} ${esc(i.nome)}`).join(', ')}</div>
       <div class="form-row">
@@ -323,8 +367,42 @@ if (temPreReserva) {
       </div>
       ${g.retirada.aviso ? `<div class="ret-aviso">${esc(g.retirada.aviso)}</div>` : ''}
     </div>`).join('');
-  document.getElementById('aviso-entrega').textContent =
-    '⚠️ Pré-reserva: leve o comprovante do PIX e retire no local e horário escolhidos acima.';
+  grupos.forEach((g, n) => {
+    const [l, j] = escolhido[g.chave] || [];
+    if (l) $(`ret-local-${n}`).value = l;
+    if (j) $(`ret-janela-${n}`).value = j;
+  });
+  if (temPreReserva) $('aviso-entrega').textContent = '⚠️ Pré-reserva: leve o comprovante do PIX e retire no local e horário escolhidos acima.';
+  else if (!todosVirtuais) $('aviso-entrega').textContent = AVISO_PADRAO;
+
+  renderDoacao();
+  atualizarQR();
+}
+
+// Antes de mostrar o pedido, confere se as pré-reservas do carrinho ainda estão abertas.
+// Carrinhos podem ficar dias parados: o que encerrou sai do carrinho e a pessoa é avisada.
+async function conferirCarrinho() {
+  const removidos = [];
+  const preIds = Object.keys(carrinho).filter(id => ehPreReserva(carrinho[id]));
+  await Promise.all([
+    ...preIds.map(async id => {
+      try {
+        const snap = await getDoc(doc(db, 'estoque', id));
+        const atual = snap.exists() ? snap.data() : null;
+        if (!atual || (ehPreReserva(atual) && !reservaAberta(atual))) removidos.push(id);
+        else if (ehPreReserva(atual)) carrinho[id].retirada = atual.retirada; // usa as opções de retirada atuais
+      } catch(e) { console.warn('Não foi possível conferir', id, e.message); }
+    }),
+    getDoc(doc(db, 'estoque', 'vaquinha')).then(sn => { vaquinhaDoc = sn.exists() ? sn.data() : null; }).catch(() => {}),
+  ]);
+  if (removidos.length) {
+    const nomes = removidos.map(id => carrinho[id].nome);
+    removidos.forEach(id => delete carrinho[id]);
+    salvarCarrinho();
+    const lista = nomes.map(n => `<strong>${esc(n)}</strong>`).join(', ');
+    $('aviso-removidos').innerHTML = `🕐 Passou o prazo das pré-reservas de ${lista}, então ${removidos.length > 1 ? 'esses itens saíram' : 'esse item saiu'} do seu carrinho. O valor e o QR Code do PIX já foram atualizados. Obrigado pelo carinho e até a próxima! 💛`;
+    $('aviso-removidos').style.display = 'block';
+  }
 }
 
 // Lê o que a pessoa escolheu; devolve null (e avisa) se faltar algo
@@ -362,7 +440,7 @@ function validarRetiradas(estoqueAtual, escolhas) {
 // ── LÊ CHAVE PIX E TIPO DO FIRESTORE ─────────────────────────
 let PIX_CHAVE = '';
 let PIX_TIPO  = 'email'; // padrão
-async function carregarPixEGerarQR() {
+async function carregarPix() {
   try {
     const snap = await getDoc(doc(db, 'config', 'loja'));
     if (snap.exists()) {
@@ -372,11 +450,21 @@ async function carregarPixEGerarQR() {
   } catch(e) {
     console.warn('Não foi possível ler config/loja:', e.message);
   }
-  document.getElementById('pix-chave-txt').textContent = PIX_CHAVE || '—';
-  if (PIX_CHAVE && total > 0) gerarQRCode(PIX_CHAVE, PIX_TIPO, total);
-  else mostrarErroQR();
+  pixCarregado = true;
+  atualizarQR();
 }
-carregarPixEGerarQR();
+let pixCarregado = false;
+
+// Redesenha o QR Code com o total atual (chamado a cada mudança no carrinho)
+function atualizarQR() {
+  if (!pixCarregado) return;
+  document.getElementById('pix-chave-txt').textContent = PIX_CHAVE || '—';
+  document.getElementById('qr-box')?.remove();
+  if (PIX_CHAVE && total > 0) {
+    document.getElementById('qr-loading').style.display = '';
+    gerarQRCode(PIX_CHAVE, PIX_TIPO, total);
+  } else mostrarErroQR();
+}
 
 // ── NORMALIZA CHAVE PIX CONFORME O TIPO ───────────────────────
 function normalizarChave(chave, tipo) {
@@ -597,6 +685,10 @@ window.confirmarPedido = async function() {
     btn.textContent = todosVirtuais ? BTN_VAQUINHA : BTN_PADRAO;
   }
 };
+
+// ── INÍCIO ─────────────────────────────────────────────────────
+carregarPix();
+conferirCarrinho().finally(renderTudo);
 </script>
 </body>
 </html>

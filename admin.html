@@ -330,6 +330,14 @@ tr:hover td{background:#fafafa;}
               </div>
               <div id="det-pre" style="display:none;margin-top:.9rem">
                 <div class="fg-e" style="margin-bottom:.9rem">
+                  <label>Período das pré-reservas (quando o site aceita reservas)</label>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="datetime-local" id="det-reserva-ini"> <span>até</span>
+                    <input type="datetime-local" id="det-reserva-fim">
+                  </div>
+                  <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Vazio no início = já aberto. Vazio no fim = aberto até a última data de retirada passar. Antes do início aparece "Em breve"; depois do fim, "Encerrado".</small>
+                </div>
+                <div class="fg-e" style="margin-bottom:.9rem">
                   <label>Locais de retirada (um por linha)</label>
                   <textarea id="det-locais" rows="3" style="width:100%;resize:vertical" placeholder="Paizódromo&#10;Portaria do Infantil"></textarea>
                 </div>
@@ -342,7 +350,7 @@ tr:hover td{background:#fafafa;}
                   <label>Aviso no checkout (opcional)</label>
                   <input type="text" id="det-aviso" placeholder="ex: Leve o comprovante do PIX" style="width:100%">
                 </div>
-                <small style="font-size:11px;color:var(--text-muted);margin-top:6px;display:block">Datas que já passaram deixam de ser oferecidas. Sem nenhuma data futura, as pré-reservas ficam encerradas. Estoque inicial = quantas unidades você aceita reservar.</small>
+                <small style="font-size:11px;color:var(--text-muted);margin-top:6px;display:block">Datas de retirada que já passaram deixam de ser oferecidas. Sem nenhuma data futura, as pré-reservas ficam encerradas. Estoque inicial = quantas unidades você aceita reservar.</small>
               </div>
             </div>
 
@@ -474,7 +482,7 @@ import { getFirestore, collection, doc, getDoc, onSnapshot,
          updateDoc, setDoc, addDoc, serverTimestamp, increment }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { MODELO_PRE_RESERVA, normalizarRetirada } from "./retirada.js";
+import { MODELO_PRE_RESERVA, normalizarRetirada } from "./retirada.js?v=2";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -1048,7 +1056,9 @@ function lerRetiradaForm() {
   const janelas = [...document.querySelectorAll('#det-janelas .janela-row')].map(r => ({
     data: r.querySelector('.j-data').value, inicio: r.querySelector('.j-ini').value, fim: r.querySelector('.j-fim').value,
   }));
-  const r = normalizarRetirada({ locais, janelas, aviso: document.getElementById('det-aviso').value });
+  const r = normalizarRetirada({ locais, janelas, aviso: document.getElementById('det-aviso').value,
+    reservaInicio: document.getElementById('det-reserva-ini').value, reservaFim: document.getElementById('det-reserva-fim').value });
+  if (r.reservaInicio && r.reservaFim && r.reservaFim <= r.reservaInicio) throw new Error('O fim do período de pré-reservas precisa ser depois do início.');
   if (!r.locais.length) throw new Error('Informe ao menos um local de retirada.');
   if (r.janelas.length !== janelas.length) throw new Error('Preencha data, início e fim de cada horário de retirada (ou remova a linha).');
   if (!r.janelas.length) throw new Error('Informe ao menos uma data de retirada.');
@@ -1079,6 +1089,8 @@ function popularFormDetalhe(id) {
   const ret = normalizarRetirada(p.retirada);
   document.getElementById('det-locais').value = ret.locais.join('\n');
   document.getElementById('det-aviso').value  = ret.aviso || '';
+  document.getElementById('det-reserva-ini').value = ret.reservaInicio || '';
+  document.getElementById('det-reserva-fim').value = ret.reservaFim || '';
   document.getElementById('det-janelas').innerHTML = '';
   ret.janelas.forEach(j => addJanelaRow(j));
   if (p.modelo === MODELO_PRE_RESERVA && !ret.janelas.length) addJanelaRow();

@@ -696,7 +696,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getFirestore, collection, onSnapshot }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { ehPreReserva, reservaAberta, resumoRetirada } from "./retirada.js";
+import { ehPreReserva, reservaAberta, statusReserva, avisoReserva, resumoRetirada } from "./retirada.js?v=2";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -820,18 +820,18 @@ function cardProduto(p) {
         <a href="produto.html?id=${p.id}" style="text-decoration:none;color:inherit">
           <div class="card-nome">${p.nome}</div>
         </a>
-        ${preReserva ? `<div class="card-retirada">📍 Retirada: ${reservaAberta(p) ? resumoRetirada(p.retirada) : 'pré-reservas encerradas'}</div>` : ''}
+        ${preReserva ? `${statusReserva(p) !== 'encerrada' ? `<div class="card-retirada">📍 Retirada: ${resumoRetirada(p.retirada)}</div>` : ''}${avisoReserva(p) ? `<div class="card-retirada">⏰ ${avisoReserva(p)[0].toUpperCase() + avisoReserva(p).slice(1)}</div>` : ''}` : ''}
         <div class="card-footer">
           <div>
             <div class="preco">R$ ${p.preco}</div>
             ${temEstoque && disponivelAgora > 0
               ? `<div class="estoque-info">${disponivelAgora} disponíveis</div>`
-              : `<div class="estoque-esgotado">Esgotado</div>`}
+              : (preReserva && !reservaAberta(p) ? '' : `<div class="estoque-esgotado">Esgotado</div>`)}
           </div>
           <button class="btn-add" id="btn-${p.id}"
             ${(temEstoque && disponivelAgora > 0) ? '' : 'disabled'}
             onclick="${preReserva ? `abrirModalReserva('${p.id}')` : `addCarrinho('${p.id}')`}">
-            ${temEstoque && disponivelAgora > 0 ? (preReserva ? '📅 Reservar' : '+ Adicionar') : (reservaAberta(p) ? 'Esgotado' : 'Encerrado')}
+            ${temEstoque && disponivelAgora > 0 ? (preReserva ? '📅 Reservar' : '+ Adicionar') : (reservaAberta(p) ? 'Esgotado' : statusReserva(p) === 'antes' ? 'Em breve' : 'Encerrado')}
           </button>
         </div>
       </div>

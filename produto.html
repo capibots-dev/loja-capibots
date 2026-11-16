@@ -303,7 +303,7 @@ import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/fireb
 import { getFirestore, doc, getDoc, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { ehPreReserva, reservaAberta, resumoJanelas, normalizarRetirada } from "./retirada.js";
+import { ehPreReserva, reservaAberta, statusReserva, avisoReserva, resumoJanelas, normalizarRetirada } from "./retirada.js?v=2";
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -406,7 +406,7 @@ function atualizarBotao() {
   const direto = p?.fisico === false && Object.keys(carrinho).length === 0;
   const aberta = reservaAberta(p);
   btn.disabled = disp <= 0 || !aberta;
-  btn.textContent = !aberta ? 'Pré-reservas encerradas' : disp > 0 ? (direto ? '💛 Ir para o pagamento' : (ehPreReserva(p) ? '📅 Reservar' : `🛒 Adicionar ao Carrinho`)) : 'Esgotado';
+  btn.textContent = !aberta ? (statusReserva(p) === 'antes' ? 'Em breve' : 'Pré-reservas encerradas') : disp > 0 ? (direto ? '💛 Ir para o pagamento' : (ehPreReserva(p) ? '📅 Reservar' : `🛒 Adicionar ao Carrinho`)) : 'Esgotado';
   document.getElementById('qty-mais').disabled  = qtySelecionada >= disp;
   document.getElementById('qty-menos').disabled = qtySelecionada <= 1;
 
@@ -443,7 +443,7 @@ async function carregarProduto() {
     if (ehPreReserva(p)) {
       const r = normalizarRetirada(p.retirada);
       document.getElementById('prod-retirada').innerHTML =
-        `<strong>📅 Pré-reserva com retirada</strong><br>📍 ${r.locais.join(' ou ')}<br>🕐 ${reservaAberta(p) ? resumoJanelas(p.retirada) : 'pré-reservas encerradas'}` +
+        `<strong>📅 Pré-reserva com retirada</strong><br>📍 ${r.locais.join(' ou ')}<br>🕐 ${reservaAberta(p) ? resumoJanelas(p.retirada) : avisoReserva(p)}` + (reservaAberta(p) && avisoReserva(p) ? `<br>⏰ ${avisoReserva(p)}` : '') +
         (r.aviso ? `<br>${r.aviso}` : '') +
         '<br><small>O local e o horário são escolhidos na hora do pagamento.</small>';
       document.getElementById('prod-retirada').style.display = 'block';
