@@ -179,6 +179,31 @@ tr:hover td{background:#fafafa;}
   </div>
 </div>
 
+<!-- MODAL USUÁRIO -->
+<div class="modal-bg" id="modal-usuario">
+  <div class="modal">
+    <h2 id="mu-titulo">👤 Novo usuário</h2>
+    <div class="fg-e" style="margin-bottom:.8rem"><label>Usuário (login)</label>
+      <input type="text" id="mu-username" placeholder="ex: maria.silva" autocapitalize="none" autocomplete="off"></div>
+    <div class="fg-e" style="margin-bottom:.8rem"><label>Nome</label>
+      <input type="text" id="mu-nome" placeholder="Como aparece no painel"></div>
+    <div class="fg-e" style="margin-bottom:.8rem"><label>Perfil</label>
+      <select id="mu-perfil">
+        <option value="visualizador">👀 Visualizador (só acompanha os pedidos)</option>
+        <option value="financeiro">💸 Financeiro (pedidos + confirmar PIX)</option>
+        <option value="admin">🛡️ Administrador (acesso total)</option>
+      </select></div>
+    <div class="fg-e" style="margin-bottom:.8rem"><label>Senha</label>
+      <div style="display:flex;gap:6px"><input type="text" id="mu-senha" style="flex:1" autocomplete="off">
+        <button type="button" class="btn-a" onclick="gerarSenhaUsuario()" style="margin:0">🎲 Gerar</button></div></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:1rem"><input type="checkbox" id="mu-ativo" checked> Conta ativa</label>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="fecharModalUsuario()">Cancelar</button>
+      <button class="btn-modal-ok" id="btn-salvar-usuario" onclick="salvarUsuario()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIRMAR ENTREGA -->
 <div class="modal-bg" id="modal-entrega">
   <div class="modal">
@@ -206,6 +231,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item" onclick="showSec('estoque',this)"><span class="ic">📦</span> Estoque</div>
     <div class="nav-item" onclick="showSec('entradas',this)"><span class="ic">➕</span> Entradas</div>
     <div class="nav-item" onclick="showSec('relatorio',this)"><span class="ic">📊</span> Relatório</div>
+    <div class="nav-item" onclick="showSec('usuarios',this)"><span class="ic">👥</span> Usuários</div>
     <div class="nav-item" onclick="showSec('config',this)"><span class="ic">⚙️</span> Configurações</div>
     <div class="sb-footer">
       <div class="sb-user" id="sb-user-label"></div>
@@ -445,6 +471,18 @@ tr:hover td{background:#fafafa;}
     </div>
 
     <!-- CONFIGURAÇÕES -->
+    <!-- USUÁRIOS -->
+    <div class="secao" id="sec-usuarios">
+      <div class="ph" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h1>👥 Usuários</h1>
+        <button onclick="abrirModalUsuario(null)" style="background:var(--laranja);color:#fff;border:none;border-radius:50px;padding:9px 20px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer">+ Novo usuário</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;line-height:1.5">
+        <strong>Administrador:</strong> acesso total · <strong>Financeiro:</strong> vê os pedidos e confirma o PIX · <strong>Visualizador:</strong> só acompanha os pedidos.
+      </div>
+      <div class="tabela-wrap"><div id="tab-usuarios"><div class="tabela-vazia">Carregando...</div></div></div>
+    </div>
+
     <div class="secao" id="sec-config">
       <div class="ph"><h1>⚙️ Configurações da Loja</h1></div>
       <div style="background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);padding:1.5rem;max-width:520px">
@@ -479,7 +517,7 @@ tr:hover td{background:#fafafa;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getFirestore, collection, doc, getDoc, onSnapshot,
-         updateDoc, setDoc, addDoc, serverTimestamp, increment }
+         updateDoc, setDoc, addDoc, deleteDoc, serverTimestamp, increment }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { MODELO_PRE_RESERVA, normalizarRetirada } from "./retirada.js?v=2";
@@ -568,6 +606,10 @@ function iniciarListeners() {
     snap.forEach(d => { estoqueRT[d.id] = { id: d.id, ...d.data() }; });
     renderEstoque(); populateEntradaSelect();
   });
+  if (!restrito()) onSnapshot(collection(db, 'usuarios'), snap => {
+    usuariosRT = snap.docs.map(d => ({ ...d.data(), _id: d.id }));
+    renderUsuarios();
+  }, err => { document.getElementById('tab-usuarios').innerHTML = `<div class="tabela-vazia">Não foi possível carregar: ${err.message}</div>`; });
   if (!restrito()) onSnapshot(collection(db, 'entradas'), snap => {
     entradasRT = snap.docs
       .map(d => ({ ...d.data(), _docId: d.id }))
@@ -575,6 +617,113 @@ function iniciarListeners() {
     renderEntradas();
   });
 }
+
+// ── USUÁRIOS (só administrador) ───────────────────────────────
+let usuariosRT = [];
+let usuarioEmEdicao = null; // id do usuário editado; null = novo
+const PERFIL_ROTULO = { admin:'🛡️ Administrador', financeiro:'💸 Financeiro', visualizador:'👀 Visualizador' };
+const escU = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const perfilDe = u => PERFIS.includes(u.perfil) ? u.perfil : 'admin';
+const adminsAtivos = () => usuariosRT.filter(u => perfilDe(u) === 'admin' && u.ativo !== false);
+
+function renderUsuarios() {
+  const el = document.getElementById('tab-usuarios');
+  if (!usuariosRT.length) { el.innerHTML = '<div class="tabela-vazia">Nenhum usuário cadastrado.</div>'; return; }
+  const ord = [...usuariosRT].sort((a,b) => (a.nome||a._id).localeCompare(b.nome||b._id, 'pt-BR'));
+  el.innerHTML = `<table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody>${ord.map(u => {
+    const eu = u._id === usuarioLogado?.username;
+    return `<tr>
+      <td><span style="font-family:monospace;font-size:12px">${escU(u._id)}</span>${eu ? ' <span class="badge b-pg">você</span>' : ''}</td>
+      <td><strong>${escU(u.nome || '—')}</strong></td>
+      <td>${PERFIL_ROTULO[perfilDe(u)]}</td>
+      <td>${u.ativo === false ? '<span class="badge b-ca">Inativo</span>' : '<span class="badge b-pg">Ativo</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-a" onclick="abrirModalUsuario('${escU(u._id)}')">✏️ Editar</button>
+        ${eu ? '' : `<button class="btn-a" onclick="alternarAtivoUsuario('${escU(u._id)}')">${u.ativo === false ? '✅ Ativar' : '⏸️ Desativar'}</button>
+        <button class="btn-a btn-ca" onclick="excluirUsuario('${escU(u._id)}')">🗑️</button>`}
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+const PALAVRAS_SENHA = ['lobo','pipa','bola','gato','mesa','lago','sapo','pato','fogo','vela','rosa','casa','bolo','coco','pera','kiwi','flor','nave','vaca','bico','mato','sino','lila','tuna','pipo','mala'];
+window.gerarSenhaUsuario = function() {
+  const w = PALAVRAS_SENHA[Math.floor(Math.random() * PALAVRAS_SENHA.length)];
+  document.getElementById('mu-senha').value = w + String(10 + Math.floor(Math.random() * 90));
+};
+
+window.abrirModalUsuario = function(id) {
+  usuarioEmEdicao = id;
+  const u = id ? usuariosRT.find(x => x._id === id) : null;
+  if (id && !u) return;
+  document.getElementById('mu-titulo').textContent = id ? '✏️ Editar usuário' : '👤 Novo usuário';
+  const campo = document.getElementById('mu-username');
+  campo.value = id || ''; campo.disabled = !!id;
+  document.getElementById('mu-nome').value = u?.nome || '';
+  document.getElementById('mu-perfil').value = u ? perfilDe(u) : 'visualizador';
+  document.getElementById('mu-senha').value = u?.senha || '';
+  document.getElementById('mu-ativo').checked = u ? u.ativo !== false : true;
+  if (!id) gerarSenhaUsuario();
+  const btn = document.getElementById('btn-salvar-usuario'); btn.disabled = false; btn.textContent = '💾 Salvar';
+  document.getElementById('modal-usuario').classList.add('open');
+};
+window.fecharModalUsuario = function() { document.getElementById('modal-usuario').classList.remove('open'); };
+
+// Não deixa a loja sem nenhum administrador ativo
+function removeUltimoAdmin(id, novoPerfil, novoAtivo) {
+  const u = usuariosRT.find(x => x._id === id);
+  if (!u || perfilDe(u) !== 'admin' || u.ativo === false) return false;
+  const continuaAdmin = novoPerfil === 'admin' && novoAtivo;
+  return !continuaAdmin && adminsAtivos().length <= 1;
+}
+
+window.salvarUsuario = async function() {
+  const id = usuarioEmEdicao ?? document.getElementById('mu-username').value.trim().toLowerCase();
+  const nome = document.getElementById('mu-nome').value.trim();
+  const perfil = document.getElementById('mu-perfil').value;
+  const senha = document.getElementById('mu-senha').value.trim();
+  const ativo = document.getElementById('mu-ativo').checked;
+  if (!/^[a-z0-9._-]{2,30}$/.test(id)) return alert('Usuário: use de 2 a 30 caracteres em minúsculas, números, ponto, hífen ou sublinhado (sem espaços).');
+  if (!usuarioEmEdicao && usuariosRT.some(u => u._id === id)) return alert(`Já existe o usuário "${id}".`);
+  if (!nome) return alert('Informe o nome.');
+  if (senha.length < 4) return alert('A senha precisa ter ao menos 4 caracteres.');
+  if (usuarioEmEdicao && id === usuarioLogado?.username && (perfil !== 'admin' || !ativo)) return alert('Você não pode rebaixar nem desativar a sua própria conta.');
+  if (usuarioEmEdicao && removeUltimoAdmin(id, perfil, ativo)) return alert('A loja precisa ter ao menos um administrador ativo.');
+  const btn = document.getElementById('btn-salvar-usuario'); btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    const dados = { username: id, nome, perfil, senha, ativo };
+    if (!usuarioEmEdicao) dados.criadoEm = serverTimestamp();
+    await setDoc(doc(db, 'usuarios', id), dados, { merge: true });
+    fecharModalUsuario();
+    if (id === usuarioLogado?.username) { // atualiza o nome exibido na sessão
+      usuarioLogado.nome = nome; sessionStorage.setItem('admin_usuario', JSON.stringify(usuarioLogado));
+      document.getElementById('sb-user-label').textContent = '👤 ' + nome;
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.code === 'permission-denied'
+      ? 'O Firestore recusou a gravação (permissão negada). As regras da base precisam permitir escrita na coleção "usuarios".'
+      : 'Erro ao salvar: ' + err.message);
+    btn.disabled = false; btn.textContent = '💾 Salvar';
+  }
+};
+
+window.alternarAtivoUsuario = async function(id) {
+  const u = usuariosRT.find(x => x._id === id);
+  if (!u || id === usuarioLogado?.username) return;
+  const novo = u.ativo === false;
+  if (!novo && removeUltimoAdmin(id, perfilDe(u), false)) return alert('A loja precisa ter ao menos um administrador ativo.');
+  try { await updateDoc(doc(db, 'usuarios', id), { ativo: novo }); }
+  catch (err) { alert('Erro: ' + err.message); }
+};
+
+window.excluirUsuario = async function(id) {
+  const u = usuariosRT.find(x => x._id === id);
+  if (!u || id === usuarioLogado?.username) return;
+  if (removeUltimoAdmin(id, perfilDe(u), false)) return alert('A loja precisa ter ao menos um administrador ativo.');
+  if (!confirm(`Excluir o usuário "${id}" (${u.nome || 'sem nome'})?\nEsta ação não pode ser desfeita.`)) return;
+  try { await deleteDoc(doc(db, 'usuarios', id)); }
+  catch (err) { alert('Erro ao excluir: ' + err.message); }
+};
 
 // ── NAVEGAÇÃO ─────────────────────────────────────────────────
 window.showSec = function(id, el) {
