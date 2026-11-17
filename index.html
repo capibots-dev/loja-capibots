@@ -691,7 +691,7 @@ footer .verde{color:#6ee88a;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot }
+import { getFirestore, collection, onSnapshot, query, where }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { ehPreReserva, reservaAberta, statusReserva, avisoReserva, resumoRetirada } from "./retirada.js?v=2";
@@ -712,6 +712,19 @@ let produtosRT = {};
 let carrinho   = {};
 try { carrinho = JSON.parse(sessionStorage.getItem('capibots_cart') || '{}'); } catch(e) {}
 let vaquinhaRT = null; // dados da vaquinha em tempo real
+let comprometido = {}; // unidades já reservadas em pedidos novo/pagamento_confirmado (o estoque só baixa na entrega)
+
+// Disponível de verdade = estoque físico - o que já está comprometido em pedidos
+const disponivelDe = (p) => Math.max(0, (typeof p?.quantidade === 'number' ? p.quantidade : 0) - (comprometido[p?.id] || 0));
+
+onSnapshot(query(collection(db, 'pedidos'), where('status', 'in', ['novo', 'pagamento_confirmado'])), (snap) => {
+  comprometido = {};
+  snap.forEach(d => (d.data().itens || []).forEach(i => {
+    comprometido[i.id] = (comprometido[i.id] || 0) + (i.qty || 0);
+  }));
+  renderProdutos();
+  renderCarrinho();
+}, (err) => console.error('Erro ao ler pedidos comprometidos:', err));
 
 onSnapshot(collection(db, 'estoque'), (snap) => {
   snap.forEach(d => {
@@ -798,7 +811,7 @@ window.adicionarCotasCarrinho = function() {
 };
 
 function cardProduto(p) {
-    const qt = typeof p.quantidade === 'number' ? p.quantidade : 0;
+    const qt = disponivelDe(p);
     const preReserva = ehPreReserva(p);
     const temEstoque = qt > 0 && reservaAberta(p);
     const noCarrinho = carrinho[p.id]?.qty || 0;
@@ -887,7 +900,7 @@ function renderProdutos() {
 
 // Pré-reserva: a pessoa escolhe a quantidade num modal antes de ir ao carrinho
 let reservaId = null;
-const maxReserva = () => (produtosRT[reservaId]?.quantidade ?? 0) - (carrinho[reservaId]?.qty || 0);
+const maxReserva = () => disponivelDe(produtosRT[reservaId]) - (carrinho[reservaId]?.qty || 0);
 
 window.abrirModalReserva = function(id) {
   const prod = produtosRT[id];
@@ -924,7 +937,7 @@ window.confirmarReserva = function() {
 
 window.addCarrinho = function(id, n = 1) {
   const prod = produtosRT[id];
-  const qt   = prod?.quantidade ?? 0;
+  const qt   = disponivelDe(prod);
   const jaNoCarrinho = carrinho[id]?.qty || 0;
   if (!prod || qt - jaNoCarrinho < n || !reservaAberta(prod)) return;
   if (carrinho[id]) carrinho[id].qty += n;
@@ -987,7 +1000,7 @@ function renderCarrinho() {
     return;
   }
   el.innerHTML = itens.map(i => {
-    const dispExtra = (produtosRT[i.id]?.quantidade ?? 0) - i.qty;
+    const dispExtra = disponivelDe(produtosRT[i.id]) - i.qty;
     return `<div class="cart-item">
       <span class="ci-emoji">${i.emoji}</span>
       <div class="ci-info">

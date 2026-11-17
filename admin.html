@@ -189,7 +189,7 @@ tr:hover td{background:#fafafa;}
       <input type="text" id="mu-nome" placeholder="Como aparece no painel"></div>
     <div class="fg-e" style="margin-bottom:.8rem"><label>Perfil</label>
       <select id="mu-perfil">
-        <option value="visualizador">👀 Visualizador (só acompanha os pedidos)</option>
+        <option value="visualizador">👀 Visualizador (acompanha os pedidos e registra entregas)</option>
         <option value="financeiro">💸 Financeiro (pedidos + confirmar PIX)</option>
         <option value="admin">🛡️ Administrador (acesso total)</option>
       </select></div>
@@ -478,7 +478,7 @@ tr:hover td{background:#fafafa;}
         <button onclick="abrirModalUsuario(null)" style="background:var(--laranja);color:#fff;border:none;border-radius:50px;padding:9px 20px;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;cursor:pointer">+ Novo usuário</button>
       </div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;line-height:1.5">
-        <strong>Administrador:</strong> acesso total · <strong>Financeiro:</strong> vê os pedidos e confirma o PIX · <strong>Visualizador:</strong> só acompanha os pedidos.
+        <strong>Administrador:</strong> acesso total · <strong>Financeiro:</strong> vê os pedidos e confirma o PIX · <strong>Visualizador:</strong> acompanha os pedidos e registra entregas.
       </div>
       <div class="tabela-wrap"><div id="tab-usuarios"><div class="tabela-vazia">Carregando...</div></div></div>
     </div>
@@ -572,15 +572,16 @@ window.login = async function() {
 // Perfis (campo `perfil` em usuarios/{usuario}; ausente = admin):
 //   admin        → tudo
 //   financeiro   → só a aba Pedidos: vê os pedidos e confirma o PIX
-//   visualizador → só a aba Pedidos: apenas acompanha, sem nenhuma ação
+//   visualizador → só a aba Pedidos: acompanha e registra entregas (não confirma PIX nem cancela)
 // Atenção: é uma restrição da tela. As regras do Firestore é que impedem de verdade.
 const PERFIS = ['admin', 'financeiro', 'visualizador'];
 const restrito = () => usuarioLogado?.perfil === 'financeiro' || usuarioLogado?.perfil === 'visualizador';
 const podeConfirmarPix = () => !restrito() || usuarioLogado.perfil === 'financeiro';
+const podeEntregar = () => !restrito() || usuarioLogado.perfil === 'visualizador';
 function aplicarPerfil() {
   if (!restrito()) return;
   document.querySelectorAll('.nav-item').forEach(n => { if (!n.getAttribute('onclick').includes("'pedidos'")) n.style.display = 'none'; });
-  document.querySelector('.sb-name small').textContent = usuarioLogado.perfil === 'financeiro' ? 'Financeiro · Pedidos e PIX' : 'Acompanhamento de pedidos';
+  document.querySelector('.sb-name small').textContent = usuarioLogado.perfil === 'financeiro' ? 'Financeiro · Pedidos e PIX' : 'Pedidos e entregas';
 }
 
 window.logout = function() { sessionStorage.removeItem('admin_usuario'); location.reload(); };
@@ -820,9 +821,9 @@ function renderPedidos() {
       } else if (p.status==='novo') {
         ac = (podeConfirmarPix() ? `<button class="btn-a btn-pg" onclick="mudarStatus('${p._docId}','pagamento_confirmado')">✅ Confirmar PIX</button>` : '') + (restrito() ? '' :
               `<button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`);
-      } else if (p.status==='pagamento_confirmado' && !restrito()) {
-        ac = `<button class="btn-a btn-en" onclick="abrirModalEntrega('${p._docId}')">📦 Entregar</button>
-              <button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`;
+      } else if (p.status==='pagamento_confirmado' && podeEntregar()) {
+        ac = `<button class="btn-a btn-en" onclick="abrirModalEntrega('${p._docId}')">📦 Entregar</button>` + (restrito() ? '' :
+              `<button class="btn-a btn-ca" onclick="cancelarPedido('${p._docId}','${p.nome||'Anônimo'}')">❌</button>`);
       }
       const entregaInfo = p.entregue_por
         ? `<div style="font-size:10px;color:var(--verde-escuro)">
@@ -870,7 +871,7 @@ window.cancelarPedido = async function(docId, nomePedido) {
 
 // ── MODAL ENTREGA ──────────────────────────────────────────────
 window.abrirModalEntrega = function(docId) {
-  if (restrito()) return;
+  if (!podeEntregar()) return;
   const p = pedidosRT.find(p => p._docId === docId);
   if (!p) return;
   pedidoParaEntregar = p;
@@ -912,7 +913,7 @@ window.fecharModalEntrega = function() {
 };
 
 window.confirmarEntrega = async function() {
-  if (restrito()) return;
+  if (!podeEntregar()) return;
   if (!pedidoParaEntregar) return;
   const obs   = document.getElementById('modal-obs').value.trim();
   const docId = pedidoParaEntregar._docId;
