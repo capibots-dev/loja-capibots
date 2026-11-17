@@ -832,12 +832,15 @@ function renderPedidos() {
              ${p.entregue_obs ? '<br>💬 '+p.entregue_obs : ''}
            </div>`
         : '<span style="color:#ccc">—</span>';
+      const pixInfo = p.pix_confirmado_por
+        ? `<div style="font-size:10px;color:var(--verde-escuro);margin-top:3px">💸 PIX: <strong>${p.pix_confirmado_por}</strong><br>🕐 ${fmtData(p.pix_confirmado_em)}</div>`
+        : '';
       return `<tr>
         <td><span style="font-family:monospace;font-size:10px">${p.id||p._docId}</span></td>
         <td><strong>${p.nome||'Anônimo'}</strong><br><span style="color:var(--text-muted);font-size:10px">${[p.turma,p.whatsapp].filter(Boolean).join(' · ')||'—'}</span></td>
         <td>${eis}</td>
         <td><strong>${fmt(p.total)}</strong></td>
-        <td>${bm[virt && p.status==='entregue' ? 'recebido' : p.status]||p.status}</td>
+        <td>${bm[virt && p.status==='entregue' ? 'recebido' : p.status]||p.status}${pixInfo}</td>
         <td style="font-size:10px;white-space:nowrap">${fmtData(p.criadoEm)}</td>
         ${soVirtual ? '' : `<td>${virt ? '<span style="color:#ccc">—</span>' : entregaInfo}</td>`}
         <td style="white-space:nowrap">${ac}</td>
@@ -856,7 +859,12 @@ window.filtrar = function(st, el) {
 window.mudarStatus = async function(docId, novoStatus) {
   if (restrito() && !(novoStatus === 'pagamento_confirmado' && podeConfirmarPix())) return;
   try {
-    await updateDoc(doc(db, 'pedidos', docId), { status: novoStatus });
+    const dados = { status: novoStatus };
+    if (novoStatus === 'pagamento_confirmado') {
+      dados.pix_confirmado_por = usuarioLogado?.nome || usuarioLogado?.username || 'Admin';
+      dados.pix_confirmado_em  = serverTimestamp();
+    }
+    await updateDoc(doc(db, 'pedidos', docId), dados);
   } catch(err) {
     console.error(err);
     alert('Erro ao atualizar pedido: ' + err.message);
@@ -898,6 +906,8 @@ window.confirmarContribuicao = async function(docId) {
     }
     await updateDoc(doc(db, 'pedidos', docId), {
       status:       'entregue',
+      pix_confirmado_por: usuarioLogado?.nome || usuarioLogado?.username || 'Admin',
+      pix_confirmado_em:  serverTimestamp(),
       entregue_por: usuarioLogado?.nome || usuarioLogado?.username || 'Admin',
       entregue_em:  serverTimestamp(),
     });
