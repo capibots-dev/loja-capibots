@@ -817,7 +817,7 @@ function cardProduto(p) {
     const noCarrinho = carrinho[p.id]?.qty || 0;
     const disponivelAgora = qt - noCarrinho;
     const thumb = (p.imagens && p.imagens.length > 0)
-      ? `<img src="${p.imagens[0]}" alt="${p.nome}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`
+      ? `<img src="${p.imagens[0]}" alt="${p.nome}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`
       : p.emoji;
     return `
     <div class="card">

@@ -472,7 +472,7 @@ async function carregarProduto() {
 
       thumbsEl.innerHTML = imagens.map((src, i) => `
         <div class="thumb ${i===0?'ativo':''}" onclick="selecionarImagem(${i})">
-          <img src="${src}" alt="${p.nome} foto ${i+1}"
+          <img src="${src}" alt="${p.nome} foto ${i+1}" loading="lazy" decoding="async"
             onerror="this.parentElement.style.display='none'">
         </div>`).join('');
     } else {
