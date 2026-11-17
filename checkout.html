@@ -205,7 +205,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
         <div class="fg" id="fg-turma"><label>Turma / Série</label><input type="text" id="turma" placeholder="Ex: 3º A"></div>
       </div>
       <div class="form-row" id="row-contato">
-        <div class="fg"><label id="label-whatsapp">WhatsApp *</label><input type="tel" id="whatsapp" placeholder="(34) 9xxxx-xxxx" required></div>
+        <div class="fg"><label id="label-whatsapp">WhatsApp (opcional)</label><input type="tel" id="whatsapp" placeholder="(34) 9xxxx-xxxx"></div>
         <div class="fg" id="fg-email"><label>E-mail (opcional)</label><input type="email" id="email" placeholder="seu@email.com"></div>
       </div>
       <div class="fg" id="fg-obs"><label>Observações</label><textarea id="obs" placeholder="Alguma observação?"></textarea></div>
@@ -288,8 +288,7 @@ function aplicarModo(virtual) {
   $('aviso-virtual').textContent = '💛 Nome e WhatsApp são opcionais, mas ajudam a equipe a te agradecer!';
   $('label-nome').textContent = virtual ? 'Seu nome (opcional)' : 'Nome completo *';
   $('nome').placeholder = virtual ? 'Como quer ser chamado?' : 'Seu nome completo';
-  $('label-whatsapp').textContent = virtual ? 'WhatsApp (opcional)' : 'WhatsApp *';
-  ['nome','whatsapp'].forEach(id => virtual ? $(id).removeAttribute('required') : $(id).setAttribute('required',''));
+  virtual ? $('nome').removeAttribute('required') : $('nome').setAttribute('required','');
   ['fg-turma','fg-email','fg-obs','aviso-entrega'].forEach(id => $(id).style.display = virtual ? 'none' : '');
   $('row-nome').style.gridTemplateColumns = virtual ? '1fr' : '';
   $('row-contato').style.gridTemplateColumns = virtual ? '1fr' : '';
@@ -648,7 +647,7 @@ window.confirmarPedido = async function() {
   const errEl    = document.getElementById('stock-error');
 
   errEl.style.display = 'none';
-  if (!todosVirtuais && (!nome || !whatsapp)) { alert('Preencha nome e WhatsApp!'); return; }
+  if (!todosVirtuais && !nome) { alert('Preencha o nome!'); return; }
   if (!itens.length) { alert('Carrinho vazio!'); return; }
   const retiradas = temPreReserva ? lerEscolhasRetirada() : [];
   if (retiradas === null) return;
