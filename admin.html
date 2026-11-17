@@ -67,7 +67,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .fb.ativo{background:var(--laranja);border-color:var(--laranja);color:#fff;}
 
 /* TABELA */
-.tabela-wrap{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);overflow:hidden;}
+.tabela-wrap{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border);overflow-x:auto;}
 .tabela-hdr{padding:.9rem 1.2rem;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .tabela-hdr h2{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:900;color:var(--preto);}
 .tabela-vazia{padding:2.5rem;text-align:center;color:var(--text-muted);font-size:14px;}
@@ -159,6 +159,16 @@ tr:hover td{background:#fafafa;}
   .sidebar{display:none;}.main{padding:1rem;}
   table{font-size:11px;}th,td{padding:7px 9px;}
   .entrada-grid{grid-template-columns:1fr 1fr;}
+  /* Pedidos: cada linha vira um cartão, com as ações sempre visíveis */
+  .tb-ped,.tb-ped tbody{display:block;}
+  .tb-ped thead{display:none;}
+  .tb-ped tr{display:block;padding:10px 12px;border-bottom:1.5px solid var(--border);}
+  .tb-ped tr:last-child{border-bottom:none;}
+  .tb-ped td{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:4px 0;border:none;text-align:right;white-space:normal !important;}
+  .tb-ped td::before{content:attr(data-label);flex-shrink:0;font-size:10px;font-weight:800;color:var(--laranja-escuro);text-transform:uppercase;text-align:left;}
+  .tb-ped td:last-child{justify-content:flex-start;flex-wrap:wrap;padding-top:8px;}
+  .tb-ped td:last-child::before{display:none;}
+  .tb-ped .btn-a{padding:9px 14px;font-size:13px;}
 }
 </style>
 </head>
@@ -806,7 +816,7 @@ function renderPedidos() {
     return;
   }
 
-  document.getElementById('tab-pedidos').innerHTML = `<table>
+  document.getElementById('tab-pedidos').innerHTML = `<table class="tb-ped">
     <thead><tr>
       <th>ID</th><th>Cliente</th><th>Itens</th><th>Total</th>
       <th>Status</th><th>Data</th>${soVirtual ? '' : '<th>Entrega</th>'}<th>Ações</th>
@@ -836,13 +846,13 @@ function renderPedidos() {
         ? `<div style="font-size:10px;color:var(--verde-escuro);margin-top:3px">💸 PIX: <strong>${p.pix_confirmado_por}</strong><br>🕐 ${fmtData(p.pix_confirmado_em)}</div>`
         : '';
       return `<tr>
-        <td><span style="font-family:monospace;font-size:10px">${p.id||p._docId}</span></td>
-        <td><strong>${p.nome||'Anônimo'}</strong><br><span style="color:var(--text-muted);font-size:10px">${[p.turma,p.whatsapp].filter(Boolean).join(' · ')||'—'}</span></td>
-        <td>${eis}</td>
-        <td><strong>${fmt(p.total)}</strong></td>
-        <td>${bm[virt && p.status==='entregue' ? 'recebido' : p.status]||p.status}${pixInfo}</td>
-        <td style="font-size:10px;white-space:nowrap">${fmtData(p.criadoEm)}</td>
-        ${soVirtual ? '' : `<td>${virt ? '<span style="color:#ccc">—</span>' : entregaInfo}</td>`}
+        <td data-label="ID"><span style="font-family:monospace;font-size:10px">${p.id||p._docId}</span></td>
+        <td data-label="Cliente"><strong>${p.nome||'Anônimo'}</strong><br><span style="color:var(--text-muted);font-size:10px">${[p.turma,p.whatsapp].filter(Boolean).join(' · ')||'—'}</span></td>
+        <td data-label="Itens">${eis}</td>
+        <td data-label="Total"><strong>${fmt(p.total)}</strong></td>
+        <td data-label="Status">${bm[virt && p.status==='entregue' ? 'recebido' : p.status]||p.status}${pixInfo}</td>
+        <td data-label="Data" style="font-size:10px;white-space:nowrap">${fmtData(p.criadoEm)}</td>
+        ${soVirtual ? '' : `<td data-label="Entrega">${virt ? '<span style="color:#ccc">—</span>' : entregaInfo}</td>`}
         <td style="white-space:nowrap">${ac}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
