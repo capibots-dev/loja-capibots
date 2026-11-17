@@ -89,6 +89,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
   transition:background .15s;
 }
 .pix-chave:hover{background:#fffbe0;}
+.pix-benef{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:10px;}
 .pix-valor{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--laranja-escuro);margin:10px 0 4px;}
 .copy-btn{
   background:var(--laranja);color:#fff;border:none;border-radius:50px;
@@ -224,12 +225,13 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
             <span style="font-size:12px;color:#a07800">Gerando QR Code...</span>
           </div>
                   </div>
+        <div class="pix-benef"><strong>Beneficiário:</strong> <span id="pix-benef-nome"></span><br><strong>Banco:</strong> <span id="pix-benef-banco"></span></div>
         <div class="pix-chave-label">Chave PIX da equipe Capibots:</div>
-        <div class="pix-chave" id="pix-chave-txt" onclick="copiarChave()">carregando...</div>
+        <div class="pix-chave" id="pix-chave-txt">carregando...</div>
         <div class="pix-valor" id="pix-valor-txt">R$ 0</div>
-        <button class="copy-btn" id="copy-btn" onclick="copiarChave()">📋 Copiar chave PIX</button>
+        <button class="copy-btn" id="copy-btn" onclick="copiarChave()">📋 Copiar código PIX</button>
         <div class="pix-instrucoes">
-          Abra seu app bancário → <strong>PIX → Pagar</strong> → escaneie o QR Code ou cole a chave.<br>
+          Abra seu app bancário → <strong>PIX → Pagar</strong> → escaneie o QR Code ou use <strong>Pix Copia e Cola</strong> com o código copiado.<br>
           Após pagar, clique em <strong id="instr-btn">"Confirmar Pagamento"</strong> abaixo.
         </div>
       </div>
@@ -454,12 +456,18 @@ async function carregarPix() {
   atualizarQR();
 }
 let pixCarregado = false;
+let PIX_PAYLOAD = ''; // código Pix Copia e Cola (mesmo conteúdo do QR Code)
+const PIX_BENEFICIARIO = 'Tatiane Pereira M Souza';
+const PIX_BANCO = 'Santander';
+document.getElementById('pix-benef-nome').textContent = PIX_BENEFICIARIO;
+document.getElementById('pix-benef-banco').textContent = PIX_BANCO;
 
 // Redesenha o QR Code com o total atual (chamado a cada mudança no carrinho)
 function atualizarQR() {
   if (!pixCarregado) return;
   document.getElementById('pix-chave-txt').textContent = PIX_CHAVE || '—';
   document.getElementById('qr-box')?.remove();
+  PIX_PAYLOAD = '';
   if (PIX_CHAVE && total > 0) {
     document.getElementById('qr-loading').style.display = '';
     gerarQRCode(PIX_CHAVE, PIX_TIPO, total);
@@ -535,6 +543,7 @@ function gerarQRCode(chave, tipo, valor) {
   try {
     const payload = pixPayload(chave, tipo, valor, 'Capibots', 'Uberlandia');
     const wrap    = document.getElementById('pix-qr-wrap');
+    PIX_PAYLOAD = payload;
 
     // Renderiza direto num container visível. Num div display:none o QRCode.js
     // deixa o <img> sem src em alguns celulares (imagem quebrada).
@@ -580,11 +589,12 @@ function mostrarErroQR() {
 }
 
 window.copiarChave = function() {
-  if (!PIX_CHAVE) return;
-  navigator.clipboard.writeText(PIX_CHAVE).then(() => {
+  const texto = PIX_PAYLOAD || PIX_CHAVE;
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).then(() => {
     const btn = document.getElementById('copy-btn');
     btn.textContent = '✓ Copiado!';
-    setTimeout(() => btn.textContent = '📋 Copiar chave PIX', 2000);
+    setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000);
   });
 };
 
