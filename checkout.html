@@ -259,7 +259,7 @@ h1{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:900;color:var(--p
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, addDoc, getDocs, query, where, serverTimestamp }
+import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, getDocs, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { agruparRetiradas, janelasAbertas, rotuloJanela, normalizarRetirada, ehPreReserva, reservaAberta } from "./retirada.js?v=2";
@@ -406,13 +406,13 @@ async function conferirCarrinho() {
   }
 }
 
-// Lê o que a pessoa escolheu; devolve null (e avisa) se faltar algo
-function lerEscolhasRetirada() {
+// Lê o que a pessoa escolheu; devolve null, sem avisar, se faltar algo
+function escolhasRetirada() {
   const escolhas = [];
   for (const [n, g] of grupos.entries()) {
     const l = document.getElementById(`ret-local-${n}`).value;
     const j = document.getElementById(`ret-janela-${n}`).value;
-    if (l === '' || j === '') { alert('Escolha onde e quando retirar a pré-reserva!'); return null; }
+    if (l === '' || j === '') return null;
     const janela = janelasAbertas(g.retirada)[+j];
     escolhas.push({
       produtos: g.itens.map(i => i.id),
@@ -421,6 +421,13 @@ function lerEscolhasRetirada() {
       rotulo: rotuloJanela(janela),
     });
   }
+  return escolhas;
+}
+
+// Igual à anterior, mas avisa a pessoa quando falta escolher
+function lerEscolhasRetirada() {
+  const escolhas = escolhasRetirada();
+  if (escolhas === null) alert('Escolha onde e quando retirar a pré-reserva!');
   return escolhas;
 }
 
@@ -571,8 +578,10 @@ function gerarQRCode(chave, tipo, valor) {
       qrImg.src = dataUrl;
       box.appendChild(qrImg);
       document.getElementById('qr-loading').style.display = 'none';
+      agendarRascunho();
     } else if (box.querySelector('img')) {
       document.getElementById('qr-loading').style.display = 'none';
+      agendarRascunho();
     } else {
       mostrarErroQR();
     }
@@ -606,6 +615,60 @@ function gerarId() {
     + String(d.getMinutes()).padStart(2,'0');
   return 'CAP-' + ts + '-' + Math.random().toString(36).slice(2,5).toUpperCase();
 }
+
+// ── PEDIDO "AGUARDANDO PAGAMENTO" ─────────────────────────────
+// Quem paga o PIX nem sempre clica em "Confirmar". Por isso o pedido já é gravado, com status
+// 'aguardando_pagamento', assim que o QR Code aparece, e vai sendo atualizado com os dados e o carrinho.
+// O botão de confirmar só muda o status para 'novo'. Esse status não reserva estoque: só 'novo' e
+// 'pagamento_confirmado' reservam, então carrinhos abandonados não seguram produtos.
+const CHAVE_RASCUNHO = 'capibots_pedido_rascunho';
+let rascunho = null; // { docId, id } do pedido desta sessão
+try { rascunho = JSON.parse(sessionStorage.getItem(CHAVE_RASCUNHO)); } catch {}
+let rascunhoTimer = null;
+let rascunhoFila = Promise.resolve();
+let pedidoEnviado = false;
+
+function dadosDoPedido() {
+  const v = id => document.getElementById(id).value.trim();
+  const retiradas = temPreReserva ? escolhasRetirada() : [];
+  return {
+    nome: v('nome'), turma: v('turma'), whatsapp: v('whatsapp'), email: v('email'), obs: v('obs'),
+    itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
+    total,
+    ...(retiradas && retiradas.length ? { retiradas } : {}),
+  };
+}
+
+async function gravarRascunho() {
+  if (pedidoEnviado || !PIX_PAYLOAD || !itens.length || total <= 0) return;
+  const dados = dadosDoPedido();
+  if (rascunho) {
+    try {
+      await updateDoc(doc(db, 'pedidos', rascunho.docId), dados);
+      return;
+    } catch (e) {
+      if (e.code !== 'not-found') throw e;
+      rascunho = null; // o pedido foi apagado: cria outro
+    }
+  }
+  const id = gerarId();
+  const ref = await addDoc(collection(db, 'pedidos'), {
+    id, ...dados, status: 'aguardando_pagamento', pix_chave: PIX_CHAVE, criadoEm: serverTimestamp(),
+  });
+  rascunho = { docId: ref.id, id };
+  try { sessionStorage.setItem(CHAVE_RASCUNHO, JSON.stringify(rascunho)); } catch {}
+}
+
+// Espera a pessoa parar de digitar antes de gravar; as gravações saem uma de cada vez
+function agendarRascunho() {
+  if (pedidoEnviado) return;
+  clearTimeout(rascunhoTimer);
+  rascunhoTimer = setTimeout(() => {
+    rascunhoFila = rascunhoFila.then(gravarRascunho).catch(e => console.warn('Não foi possível salvar o pedido:', e.message));
+  }, 800);
+}
+['nome', 'turma', 'whatsapp', 'email', 'obs'].forEach(id => document.getElementById(id).addEventListener('input', agendarRascunho));
+document.getElementById('retirada-grupos').addEventListener('change', agendarRascunho);
 
 // ── Verifica disponibilidade considerando pedidos comprometidos ──────────
 async function verificarDisponibilidade() {
@@ -661,21 +724,35 @@ window.confirmarPedido = async function() {
     validarRetiradas(estoqueAtual, retiradas);
 
     btn.textContent = '⏳ Registrando pedido...';
-    const idPedido = gerarId();
 
-    // Cria pedido com status 'novo' — estoque físico NÃO é decrementado aqui
-    await addDoc(collection(db, 'pedidos'), {
-      id: idPedido,
-      nome, turma, whatsapp, email, obs,
-      itens: itens.map(i => ({ id:i.id, nome:i.nome, emoji:i.emoji, preco:i.preco, qty:i.qty })),
-      total,
-      ...(retiradas.length ? { retiradas } : {}),
-      status: 'novo',   // máquina de status: novo → pagamento_confirmado → entregue
-      pix_chave: PIX_CHAVE,  // chave lida do Firestore config/loja
-      criadoEm: serverTimestamp(),
-    });
+    // Pedido final: usa o que já foi gravado ao gerar o QR Code (se o admin já confirmou o PIX, o status não volta)
+    pedidoEnviado = true;
+    clearTimeout(rascunhoTimer);
+    await rascunhoFila;
+    let idPedido = null;
+    const dadosFinais = { ...dadosDoPedido(), ...(retiradas.length ? { retiradas } : {}) };
+    if (rascunho) {
+      const ref = doc(db, 'pedidos', rascunho.docId);
+      const atual = await getDoc(ref);
+      if (atual.exists()) {
+        await updateDoc(ref, { ...dadosFinais, ...(atual.data().status === 'aguardando_pagamento' ? { status: 'novo' } : {}) });
+        idPedido = rascunho.id;
+      }
+    }
+    if (!idPedido) {
+      // Sem pedido gravado antes: cria já como 'novo' (estoque físico NÃO é decrementado aqui)
+      idPedido = gerarId();
+      await addDoc(collection(db, 'pedidos'), {
+        id: idPedido,
+        ...dadosFinais,
+        status: 'novo',   // máquina de status: aguardando_pagamento → novo → pagamento_confirmado → entregue
+        pix_chave: PIX_CHAVE,  // chave lida do Firestore config/loja
+        criadoEm: serverTimestamp(),
+      });
+    }
 
     sessionStorage.removeItem('capibots_cart');
+    sessionStorage.removeItem(CHAVE_RASCUNHO);
     document.getElementById('form-section').style.display = 'none';
     document.getElementById('confirmacao').style.display  = 'block';
     document.getElementById('pedido-id-display').textContent = idPedido;
@@ -688,6 +765,7 @@ window.confirmarPedido = async function() {
 
   } catch (err) {
     console.error(err);
+    pedidoEnviado = false;
     errEl.textContent = '❌ ' + (err.message || 'Erro ao registrar. Tente novamente.');
     errEl.style.display = 'block';
     btn.disabled = false;
